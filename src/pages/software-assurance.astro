@@ -2,12 +2,12 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getEntry } from 'astro:content';
 
-const entry = await getEntry('pages', 'gitops');
+const entry = await getEntry('pages', 'software-assurance');
 const { Content } = await entry.render();
 const { title, description, heroEmoji, heroSubtitle, accentColor } = entry.data;
 ---
 
-<BaseLayout title={title} description={description} currentPage="gitops">
+<BaseLayout title={title} description={description} currentPage="software-assurance">
   <header class="page-hero">
     {heroEmoji && <span class="hero-emoji">{heroEmoji}</span>}
     <h1>{title}</h1>

@@ -1,0 +1,155 @@
+---
+title: "Extended Security Updates"
+description: "Deliver ESUs to end-of-support Windows Server and SQL Server through Azure Arc"
+navLabel: "ESU"
+navOrder: 5
+heroEmoji: "🛡️"
+heroSubtitle: "Keep end-of-support servers protected"
+accentColor: "orange"
+---
+
+## What Are Extended Security Updates?
+
+Extended Security Updates (ESU) provide **critical and important security patches** for Windows Server and SQL Server versions that have reached end of support. Without ESU, these servers stop receiving security updates — leaving them exposed to vulnerabilities with no patches available.
+
+**Covered products:**
+- **Windows Server 2012 / 2012 R2** — End of support: October 10, 2023
+- **Windows Server 2016** — End of support: January 12, 2027 (ESU available after)
+- **SQL Server 2012** — End of support: July 12, 2022
+- **SQL Server 2014** — End of support: July 9, 2024
+
+ESU does **not** include new features, customer-requested non-security fixes, or design change requests. It's strictly security patches — the minimum you need to stay protected.
+
+## How Azure Arc Enables ESU
+
+Traditionally, ESU required Volume Licensing agreements and manual key activation — a painful process at scale. **Azure Arc changes this entirely.** By onboarding servers to Azure Arc, you can:
+
+- **Enroll and activate ESU from the Azure portal** — no product keys to manage
+- **Pay monthly via your Azure subscription** — no upfront commitment
+- **Apply ESU at scale** using Azure Policy
+- **Track compliance** across your entire estate from a single pane
+
+The ESU license links directly to your Arc-enabled server resources, and patches flow through Windows Update or WSUS just like they always did.
+
+## ESU Pricing Model
+
+ESU pricing is based on the number of **physical cores** (minimum 16 cores per server) and compounds year over year:
+
+| Year | Windows Server Cost | Notes |
+|------|-------------------|-------|
+| Year 1 | 75% of on-prem license cost | First year after end of support |
+| Year 2 | 75% of on-prem license cost | Cumulative — you pay Year 1 + Year 2 |
+| Year 3 | 75% of on-prem license cost | Cumulative — all three years |
+
+**Important:** ESU years are cumulative. If you enroll in Year 2 without having purchased Year 1, you must back-pay for Year 1. There's no skipping years.
+
+**Free ESU on Azure infrastructure:**
+- Azure Virtual Machines — **ESU at no additional cost**
+- Azure Stack HCI — **Free ESU**
+- Azure VMware Solution — **Free ESU**
+- Azure Dedicated Host — **Free ESU**
+
+This makes migration to Azure the most cost-effective long-term option, while Arc-delivered ESU buys you time to plan that migration.
+
+## Provisioning an ESU License
+
+### Step 1: Create the ESU License Resource
+
+```bash
+az connectedmachine license create \
+  --name "WS2012-ESU-License" \
+  --resource-group "rg-arc-esu" \
+  --location "eastus" \
+  --license-type "ESU" \
+  --state "Activated" \
+  --target "Windows Server 2012" \
+  --edition "Standard" \
+  --type "pCore" \
+  --processors 16
+```
+
+### Step 2: Link the License to Arc-Enabled Servers
+
+```bash
+az connectedmachine license-profile create \
+  --resource-group "rg-arc-esu" \
+  --machine-name "SERVER01" \
+  --esu-profile-assigned-license "/subscriptions/{sub-id}/resourceGroups/rg-arc-esu/providers/Microsoft.HybridCompute/licenses/WS2012-ESU-License"
+```
+
+### Step 3: Verify Enrollment
+
+```bash
+az connectedmachine show \
+  --name "SERVER01" \
+  --resource-group "rg-arc-esu" \
+  --query "licenseProfile"
+```
+
+You can also do all of this through the Azure portal: navigate to your Arc-enabled server → **Extended Security Updates** → **Enable** → select or create a license.
+
+## At-Scale Enrollment with Azure Policy
+
+For large environments, use Azure Policy to automatically enroll servers:
+
+1. Assign the built-in policy **"Configure Extended Security Updates license for Windows Server 2012 Arc machines"**
+2. Set the scope to your management group or subscription
+3. Provide the license resource ID as a parameter
+4. The policy evaluates every Arc-enabled server and links eligible machines to the ESU license
+
+This is the recommended approach for enterprises with hundreds or thousands of end-of-support servers.
+
+## SQL Server ESU Through Arc
+
+SQL Server ESU works through **Arc-enabled SQL Server** — a separate but related resource type:
+
+```bash
+# Connect SQL Server to Azure Arc
+az sql server-arc create \
+  --name "SQL01" \
+  --resource-group "rg-arc-sql" \
+  --location "eastus"
+
+# Enable ESU for Arc-enabled SQL Server
+az sql server-arc extension set \
+  --name "SQL01" \
+  --resource-group "rg-arc-sql" \
+  --esu-enabled true
+```
+
+SQL Server ESU through Arc also supports **pay-as-you-go billing** — you're charged monthly through your Azure subscription based on core count.
+
+## WS2012 vs WS2016 Timeline
+
+| Milestone | Windows Server 2012/R2 | Windows Server 2016 |
+|-----------|----------------------|-------------------|
+| End of support | Oct 10, 2023 | Jan 12, 2027 |
+| ESU Year 1 | Oct 2023 – Oct 2024 | Jan 2027 – Jan 2028 |
+| ESU Year 2 | Oct 2024 – Oct 2025 | Jan 2028 – Jan 2029 |
+| ESU Year 3 | Oct 2025 – Oct 2026 | Jan 2029 – Jan 2030 |
+| ESU ends | October 2026 | January 2030 |
+
+**WS2012 is in its final ESU year.** If you have WS2012 servers still running, migration planning should be active now — ESU protection ends October 2026 with no further extension.
+
+**WS2016** hasn't reached end of support yet, but planning should start now. You have until January 2027 before ESU kicks in.
+
+## Best Practices
+
+- **Inventory first** — Use Azure Arc and Azure Resource Graph to identify all end-of-support servers before purchasing ESU licenses
+- **Assess migration options** — Run Azure Migrate assessments to compare ESU cost over 3 years vs migration cost. Migration is almost always cheaper long-term
+- **Start with Arc onboarding** — Even if you're not ready for ESU yet, onboard servers to Arc now. It's free and gives you the inventory and management plane
+- **Use Azure Policy for enforcement** — Don't manually enroll servers one by one. Policy-driven enrollment ensures no server gets missed
+- **Monitor patch compliance** — After ESU enrollment, use Azure Update Manager to verify patches are actually being applied
+- **Plan for ESU end-of-life** — ESU only extends for 3 years. Have a migration timeline that completes before ESU coverage ends
+
+## Cost Comparison: ESU vs Migration
+
+For a typical 100-server WS2012 Standard environment (16 cores each):
+
+| Approach | Year 1 | Year 2 | Year 3 | Total |
+|----------|--------|--------|--------|-------|
+| ESU on-prem via Arc | ~$50K | ~$100K | ~$150K | ~$300K |
+| Migrate to Azure VMs | ~$80K (migration) | $0 ESU | $0 ESU | ~$80K + compute |
+| Migrate to Azure Stack HCI | ~$120K (hardware + setup) | $0 ESU | $0 ESU | ~$120K |
+
+*Estimates vary by region and licensing. The point: ESU is a bridge, not a destination.*
