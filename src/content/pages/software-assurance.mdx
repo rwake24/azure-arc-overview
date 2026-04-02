@@ -1,6 +1,6 @@
 ---
 title: "Software Assurance"
-description: "Maximize Azure Hybrid Benefit and licensing advantages through Software Assurance"
+description: "Unlock Azure Arc management capabilities and hybrid licensing benefits through Software Assurance"
 navLabel: "SA"
 navOrder: 6
 heroEmoji: "📋"
@@ -8,134 +8,145 @@ heroSubtitle: "Unlock hybrid licensing benefits"
 accentColor: "purple"
 ---
 
-## What Is Software Assurance?
+## Software Assurance + Azure Arc
 
-Software Assurance (SA) is a **Microsoft Volume Licensing benefit** that provides a comprehensive set of technologies, services, and rights for deploying and managing Microsoft products. Think of it as a maintenance agreement on top of your licenses — you pay annually, and in return you get upgrade rights, deployment flexibility, and significant Azure cost savings.
+Software Assurance (SA) is a Microsoft Volume Licensing benefit — but for Azure Arc customers, it's more than just a maintenance agreement. **SA unlocks an entire tier of Azure Arc management capabilities at no additional cost** that would otherwise require per-VM monthly fees.
 
-SA is purchased as part of **Enterprise Agreements (EA)**, **Enterprise Subscription Agreements (EAS)**, **Microsoft Products and Services Agreements (MPSA)**, or **Select Plus** agreements.
+If your organization has Windows Server or SQL Server licenses with active SA (through EA, EAS, MPSA, or Select Plus agreements), you're leaving money on the table if you're not using these benefits with Azure Arc.
+
+## Windows Server Management Enabled by Azure Arc
+
+Azure Arc has three tiers of capability for Windows Server. SA customers get access to the **premium tier** — "Windows Server management enabled by Azure Arc" — at no extra cost.
+
+### What SA Unlocks (vs Paid)
+
+| Capability | Without SA (Basic Arc) | With SA |
+|-----------|----------------------|---------|
+| Azure Change Tracking and Inventory | **$6/VM/month** | ✅ Included |
+| Azure Policy Machine Guest Configuration | **$6/VM/month** (bundled with above) | ✅ Included |
+| Azure Update Manager | **$5/VM/month** | ✅ Included |
+| Windows Server Best Practices Assessment | ❌ Not available | ✅ Included |
+| Remote Support | ❌ Not available | ✅ Included |
+| Disaster Recovery | ❌ Not available | ✅ Included |
+| Network HUD / Accelnet (WS 2025) | ❌ Not available | ✅ Included |
+
+**Key detail:** Some of these capabilities aren't just discounted for SA customers — they're **exclusive**. Best Practices Assessment, Remote Support, Disaster Recovery, and Network HUD are only available through the SA-enabled tier. You can't buy them separately on Basic Arc.
+
+### What This Means in Real Dollars
+
+For a 100-server environment on Basic Arc without SA:
+- Change Tracking + Guest Config: 100 × $6/mo = **$600/month**
+- Azure Update Manager: 100 × $5/mo = **$500/month**
+- **Total: $1,100/month ($13,200/year)** — just for these three capabilities
+
+With SA, all of that is **$0/month** — plus you get the four exclusive capabilities on top.
+
+### What's Always Free (Basic Arc)
+
+These capabilities are available to all Arc-enabled servers regardless of SA:
+
+- Tagging and inventory management
+- Microsoft Entra ID authentication
+- Role-Based Access Control (RBAC)
+- Azure Resource Manager integration
+- Windows Admin Center
+- Azure Migrate assessments and business case
+
+### What's Always Paid (Both Tiers)
+
+These services are paid add-ons regardless of SA status:
+
+- Microsoft Copilot in Azure (preview)
+- Hotpatch
+- Microsoft Defender for Cloud
+- Azure Monitor
+- Microsoft Sentinel
+- Extended Security Updates
+
+## SQL Server Management with Arc + SA
+
+Arc-enabled SQL Server brings Azure-grade management to on-prem and third-party cloud SQL instances. SA enhances this with **ESU entitlement and pay-as-you-go flexibility**.
+
+### Arc-Enabled SQL Server Capabilities
+
+| Capability | Standalone SQL | Arc-Enabled SQL |
+|-----------|---------------|----------------|
+| Pay-as-you-go billing | ❌ | ✅ |
+| Microsoft Entra ID auth | ❌ | ✅ |
+| Best practices assessment | ❌ | ✅ |
+| Inventory management | ❌ | ✅ |
+| Automated patching | ❌ | ✅ |
+| Automated backup | ❌ | ✅ |
+| Performance monitoring | ❌ | ✅ |
+| Microsoft Defender for SQL | ✅ | ✅ |
+| HA/DR inventory management | ❌ | ✅ |
+| Microsoft Purview (data governance) | ❌ | ✅ |
+| Point-in-time restore | ❌ | ✅ |
+
+Without Arc, standalone SQL Server supports **one** Azure management capability (Defender). With Arc, you get **eleven** — and SA customers get ESU coverage on top.
+
+### SQL Server SA Benefits
+
+- **ESU at no additional cost** — SA-covered SQL Server licenses include ESU when enrolled through Arc. Without SA, ESU is 75% of license cost per year, cumulative.
+- **Azure Hybrid Benefit** — Use existing SQL Server licenses on Azure VMs, saving up to 85% vs pay-as-you-go
+- **License Mobility** — Move SQL Server licenses between on-prem, third-party clouds, and Azure
 
 ## Azure Hybrid Benefit (AHB)
 
-The most valuable SA benefit for Azure customers is **Azure Hybrid Benefit** — the right to use your existing on-premises Windows Server and SQL Server licenses in Azure, dramatically reducing compute costs.
+The most direct SA cost savings for Azure customers. AHB lets you apply existing on-prem licenses to Azure resources.
 
-### Windows Server AHB Savings
+### Windows Server AHB
 
-| Scenario | Pay-as-you-go | With AHB | Savings |
-|----------|--------------|----------|---------|
-| D4s v5 (4 vCPUs, Windows) | ~$280/mo | ~$140/mo | **~50%** |
-| D8s v5 (8 vCPUs, Windows) | ~$560/mo | ~$280/mo | **~50%** |
-| E16s v5 (16 vCPUs, Windows) | ~$1,120/mo | ~$560/mo | **~50%** |
+Each **Windows Server Standard** SA license (16 cores) covers up to **2 Azure VMs** with up to 8 vCPUs each. **Datacenter edition** covers **unlimited Azure VMs**.
 
-Each **Windows Server Standard** SA license (16 cores) covers up to **2 Azure VMs** with up to 8 vCPUs each. **Datacenter edition** licenses cover **unlimited Azure VMs**.
+| VM Size | Pay-as-you-go | With AHB | Savings |
+|---------|--------------|----------|---------|
+| D4s v5 (4 vCPUs) | ~$280/mo | ~$140/mo | **~50%** |
+| D8s v5 (8 vCPUs) | ~$560/mo | ~$280/mo | **~50%** |
+| E16s v5 (16 vCPUs) | ~$1,120/mo | ~$560/mo | **~50%** |
 
-### SQL Server AHB Savings
+### SQL Server AHB
 
-SQL Server AHB is even more dramatic:
-
-| Scenario | Pay-as-you-go | With AHB | Savings |
+| Instance | Pay-as-you-go | With AHB | Savings |
 |----------|--------------|----------|---------|
 | SQL MI General Purpose (8 vCores) | ~$1,500/mo | ~$450/mo | **~70%** |
 | SQL MI Business Critical (8 vCores) | ~$4,200/mo | ~$1,100/mo | **~74%** |
 | SQL on Azure VM (Enterprise, 8 vCPUs) | ~$2,400/mo | ~$280/mo | **~88%** |
 
-**SQL Server Enterprise** with SA can exchange 1 on-prem core for 1 Azure vCore. **Standard** exchanges at a 1:1 ratio for General Purpose tier.
-
 ### Enabling AHB
 
 ```bash
-# Enable AHB on an existing Azure VM
+# Enable AHB on an Azure VM
 az vm update \
   --name "vm-prod-01" \
   --resource-group "rg-production" \
   --license-type "Windows_Server"
 
-# Enable AHB for SQL on Azure VM
-az vm update \
-  --name "vm-sql-01" \
-  --resource-group "rg-production" \
-  --license-type "PAYG" \
-  --set "sqlServerLicenseType=AHUB"
-
-# Enable AHB on SQL Managed Instance
+# Enable AHB for SQL Managed Instance
 az sql mi update \
   --name "sqlmi-prod" \
   --resource-group "rg-production" \
   --license-type "BasePrice"
 ```
 
-In the Azure portal: VM → **Configuration** → **Licensing** → select **Azure Hybrid Benefit**.
-
-## AHB for Azure Arc
-
-Azure Hybrid Benefit extends beyond Azure VMs to **Arc-enabled infrastructure**:
-
-### Arc-Enabled SQL Server
-If you have SQL Server with SA running on-premises or in another cloud, you can:
-- Apply AHB to **Arc-enabled SQL Server** for billing purposes
-- Get **SQL Server ESU at no additional cost** (SA benefit)
-- Track license utilization through the Azure portal
-
-```bash
-# Apply AHB to Arc-enabled SQL Server
-az sql server-arc update \
-  --name "SQL-ONPREM-01" \
-  --resource-group "rg-arc-sql" \
-  --license-type "Paid"
-```
-
-### Arc-Enabled Windows Server
-For Arc-enabled Windows Servers with SA:
-- **ESU at no additional cost** for WS2012/R2 (SA benefit covers ESU)
-- **Windows Server Management** through Arc inherits your SA entitlements
-- License compliance tracking through Azure Resource Graph
-
-## ESU Entitlement Through SA
-
-This is where SA and ESU intersect — and it's a major cost saver:
-
-**With active SA on Windows Server 2012/R2 or 2016:**
-- You are entitled to ESU **at no additional charge** when running on Azure infrastructure
-- On-premises ESU through Arc is available at a **reduced rate** for SA customers
-
-**Without SA:**
-- You must purchase ESU separately through Azure Arc (pay-as-you-go)
-- Year-over-year costs compound (Year 1 + Year 2 + Year 3)
-
-**The math is clear:** If you have more than a handful of end-of-support servers, maintaining SA is almost always cheaper than buying ESU standalone.
-
-## License Mobility
-
-SA includes **License Mobility through Software Assurance** — the right to move eligible server application licenses between third-party shared servers (cloud providers) and Azure:
-
-- **SQL Server** — Move licenses to any authorized cloud provider or Azure
-- **Exchange Server** — Move to partner-hosted environments
-- **SharePoint Server** — Move to authorized hosting providers
-- **Dynamics 365 Server** — Same flexibility
-
-This means you can bring your SQL Server licenses to AWS or GCP (with License Mobility), then later move them to Azure with AHB — full flexibility.
+In the portal: VM → **Configuration** → **Licensing** → select **Azure Hybrid Benefit**.
 
 ## Disaster Recovery Rights
 
-SA provides **free failover rights** for disaster recovery:
+SA provides **free failover rights** — no additional licenses needed for DR replicas:
 
-- **Windows Server:** Up to the same number of virtual instances as your production environment
+- **Windows Server:** Match your production virtual instances in a passive DR site
 - **SQL Server:** One passive failover instance per licensed production instance
-- **Azure Site Recovery:** SA customers can use ASR with their existing licenses — no need to buy new Windows Server or SQL Server licenses for the DR site
+- **Azure Site Recovery:** Use ASR with existing SA-covered licenses for the DR target
+
+This is especially powerful with the Arc SA tier's built-in **Disaster Recovery** capability — you get both the license rights and the Azure management tooling.
+
+## Tracking SA Benefits with Azure Arc
+
+Use Azure Resource Graph to audit SA and AHB utilization across your estate:
 
 ```bash
-# Verify DR rights on Arc-enabled server
-az connectedmachine show \
-  --name "DR-SERVER-01" \
-  --resource-group "rg-arc-dr" \
-  --query "licenseProfile"
-```
-
-## Tracking SA and AHB with Azure Arc
-
-Azure Arc + Azure Resource Graph gives you a **single view of license compliance** across hybrid environments:
-
-```bash
-# Find all Arc-enabled servers and their license types
+# Find all Arc-enabled servers and their license profiles
 az graph query -q "
   resources
   | where type =~ 'microsoft.hybridcompute/machines'
@@ -144,15 +155,7 @@ az graph query -q "
   | order by name asc
 "
 
-# Find all VMs using Azure Hybrid Benefit
-az graph query -q "
-  resources
-  | where type =~ 'microsoft.compute/virtualmachines'
-  | where properties.licenseType =~ 'Windows_Server'
-  | project name, location, resourceGroup
-"
-
-# Count AHB adoption across your estate
+# Count AHB adoption across Azure VMs
 az graph query -q "
   resources
   | where type =~ 'microsoft.compute/virtualmachines'
@@ -161,47 +164,11 @@ az graph query -q "
 "
 ```
 
-## Other SA Benefits for Azure Adoption
-
-Beyond AHB and ESU, SA includes several benefits that accelerate cloud adoption:
-
-- **Training Vouchers** — Up to 3 days of instructor-led training per qualifying license. Use these for Azure certification prep (AZ-900, AZ-104, AZ-305)
-- **Planning Services** — Up to 5 days of deployment planning with Microsoft-approved partners. Ideal for Azure migration planning
-- **24/7 Problem Resolution Support** — Unlimited support incidents for SA-covered products
-- **Spread Payments** — Pay for licenses in annual installments instead of upfront
-- **Step-Up Licenses** — Upgrade from Standard to Datacenter edition at a reduced cost
-- **Fail-Over Rights** — Already covered above, but worth emphasizing for DR planning
-
-## Verifying SA Coverage
-
-To check if your licenses have active SA:
-
-1. Sign in to the **Microsoft Volume Licensing Service Center (VLSC)** at [https://www.microsoft.com/licensing/servicecenter](https://www.microsoft.com/licensing/servicecenter)
-2. Navigate to **Licenses** → **License Summary**
-3. Filter by product (Windows Server, SQL Server)
-4. Check the **SA Expiration Date** column
-
-For Enterprise Agreement customers, your Microsoft account team or Licensing Solution Provider (LSP) can provide a full SA entitlement report.
-
-## Cost Comparison: With SA vs Without
-
-For a typical enterprise with 50 Windows Server Datacenter licenses and 20 SQL Server Enterprise licenses:
-
-| Benefit | Without SA | With SA | Annual Savings |
-|---------|-----------|---------|---------------|
-| Azure VM compute (AHB) | $480K/yr | $240K/yr | **$240K** |
-| SQL MI compute (AHB) | $360K/yr | $95K/yr | **$265K** |
-| ESU for 30 WS2012 servers | $45K/yr | $0 (included) | **$45K** |
-| DR licenses | $80K (new licenses) | $0 (failover rights) | **$80K** |
-| **Total annual savings** | | | **~$630K** |
-
-*SA itself costs roughly 25% of the license value annually. For most enterprises running hybrid, the AHB savings alone pay for SA several times over.*
-
 ## Getting Started
 
-1. **Audit your licenses** — Know what you own, what has SA, and when SA expires
-2. **Onboard to Azure Arc** — Get visibility into your entire estate (free)
-3. **Enable AHB everywhere** — Every Azure VM and SQL instance should be checked for AHB eligibility
-4. **Enroll ESU through Arc** — If you have end-of-support servers, use Arc + SA for free ESU
-5. **Use Azure Resource Graph** — Build dashboards to track AHB adoption and SA utilization
-6. **Talk to your LSP** — Ensure SA renewals align with your Azure migration timeline
+1. **Verify SA coverage** — Check the [Volume Licensing Service Center](https://www.microsoft.com/licensing/servicecenter) or ask your Licensing Solution Provider
+2. **Onboard to Azure Arc** — It's free. Every server you onboard gets Basic Arc capabilities immediately
+3. **Activate WS management** — For SA-covered Windows Servers, enable the "Windows Server management enabled by Azure Arc" tier in the portal
+4. **Enable AHB everywhere** — Audit every Azure VM and SQL instance for AHB eligibility
+5. **Enroll ESU** — If you have end-of-support servers with SA, enroll through Arc for free ESU
+6. **Track with Resource Graph** — Build dashboards to monitor SA benefit utilization and identify gaps

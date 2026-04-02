@@ -101,7 +101,14 @@ This is the recommended approach for enterprises with hundreds or thousands of e
 
 ## SQL Server ESU Through Arc
 
-SQL Server ESU works through **Arc-enabled SQL Server** — a separate but related resource type:
+SQL Server ESU works through **Arc-enabled SQL Server** — a separate but related resource type that brings Azure management capabilities to on-prem and third-party cloud SQL instances.
+
+**Covered SQL Server versions:**
+- **SQL Server 2012** — End of support: July 12, 2022 (ESU ended July 2025)
+- **SQL Server 2014** — End of support: July 9, 2024 (ESU Year 1 active)
+- **SQL Server 2016** — End of support: July 14, 2026 (plan ahead)
+
+### Onboarding SQL Server to Arc
 
 ```bash
 # Connect SQL Server to Azure Arc
@@ -110,16 +117,54 @@ az sql server-arc create \
   --resource-group "rg-arc-sql" \
   --location "eastus"
 
-# Enable ESU for Arc-enabled SQL Server
+# Enable ESU subscription for Arc-enabled SQL Server
 az sql server-arc extension set \
   --name "SQL01" \
   --resource-group "rg-arc-sql" \
   --esu-enabled true
 ```
 
-SQL Server ESU through Arc also supports **pay-as-you-go billing** — you're charged monthly through your Azure subscription based on core count.
+SQL Server ESU through Arc supports **pay-as-you-go billing** — you're charged monthly through your Azure subscription based on core count. No Volume Licensing keys needed.
 
-## WS2012 vs WS2016 Timeline
+### What Arc-Enabled SQL Server Unlocks (Beyond ESU)
+
+Connecting SQL Server to Arc doesn't just get you ESU — it brings a full suite of Azure management capabilities to your on-prem instances:
+
+| Capability | Arc-Enabled SQL Server | Standalone SQL Server |
+|-----------|----------------------|---------------------|
+| Pay-as-you-go billing | ✅ | ❌ |
+| Microsoft Entra ID authentication | ✅ | ❌ |
+| Best practices assessment | ✅ | ❌ |
+| Inventory management | ✅ | ❌ |
+| Automated patching | ✅ | ❌ |
+| Automated backup | ✅ | ❌ |
+| Performance monitoring | ✅ | ❌ |
+| Microsoft Defender for SQL | ✅ | ✅ |
+| HA/DR inventory management | ✅ | ❌ |
+| Microsoft Purview (data governance) | ✅ | ❌ |
+| Point-in-time restore | ✅ | ❌ |
+
+Standard SQL Server on its own supports only **Defender for SQL** — everything else requires Arc or Azure VM.
+
+### SQL Server ESU Pricing
+
+SQL Server ESU follows a similar model to Windows Server:
+
+| Edition | Per-Core Cost (Year 1) | Notes |
+|---------|----------------------|-------|
+| Enterprise | 75% of license cost | Minimum 4 cores |
+| Standard | 75% of license cost | Minimum 4 cores |
+
+**Free ESU for SQL Server on Azure:**
+- SQL Server on Azure VMs — **Free ESU**
+- SQL Server on Azure Stack HCI — **Free ESU**
+- SQL Server on Azure VMware Solution — **Free ESU**
+
+**Software Assurance benefit:** Customers with active SA on SQL Server licenses receive ESU at **no additional cost** when enrolled through Azure Arc. See the [Software Assurance](/azure-arc-overview/software-assurance) page for details.
+
+## ESU Timelines
+
+### Windows Server
 
 | Milestone | Windows Server 2012/R2 | Windows Server 2016 |
 |-----------|----------------------|-------------------|
@@ -132,6 +177,18 @@ SQL Server ESU through Arc also supports **pay-as-you-go billing** — you're ch
 **WS2012 is in its final ESU year.** If you have WS2012 servers still running, migration planning should be active now — ESU protection ends October 2026 with no further extension.
 
 **WS2016** hasn't reached end of support yet, but planning should start now. You have until January 2027 before ESU kicks in.
+
+### SQL Server
+
+| Milestone | SQL Server 2012 | SQL Server 2014 | SQL Server 2016 |
+|-----------|----------------|----------------|----------------|
+| End of support | Jul 12, 2022 | Jul 9, 2024 | Jul 14, 2026 |
+| ESU Year 1 | Jul 2022 – Jul 2023 | Jul 2024 – Jul 2025 | Jul 2026 – Jul 2027 |
+| ESU Year 2 | Jul 2023 – Jul 2024 | Jul 2025 – Jul 2026 | Jul 2027 – Jul 2028 |
+| ESU Year 3 | Jul 2024 – Jul 2025 | Jul 2026 – Jul 2027 | Jul 2028 – Jul 2029 |
+| ESU ends | July 2025 | July 2027 | July 2029 |
+
+**SQL Server 2012 ESU has already ended.** If you still have SQL 2012 instances, migration is your only path forward. SQL Server 2014 is in active ESU — enroll through Arc now if you haven't already.
 
 ## Best Practices
 
