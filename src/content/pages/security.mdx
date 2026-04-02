@@ -1,0 +1,163 @@
+---
+title: "Security"
+description: "Secure hybrid resources with Microsoft Defender for Cloud, Sentinel, ESU, managed identity, and certificate-based auth"
+navLabel: "Security"
+navOrder: 7
+heroEmoji: "🛡️"
+heroSubtitle: "Enterprise security for hybrid and multicloud"
+accentColor: "red"
+---
+
+## Security with Azure Arc
+
+Azure Arc extends Azure's security stack to hybrid and multicloud resources. By projecting servers and Kubernetes clusters into Azure Resource Manager, you gain access to **Microsoft Defender for Cloud**, **Microsoft Sentinel**, **managed identity**, and a suite of security capabilities that previously required resources to be running natively in Azure.
+
+## Microsoft Defender for Cloud
+
+Defender for Cloud provides **Cloud Security Posture Management (CSPM)** and **Cloud Workload Protection (CWP)** for Arc-enabled resources.
+
+### Defender for Servers
+
+Enabling Defender for Servers on Arc-enabled machines provides:
+
+- **Microsoft Defender for Endpoint (MDE)** — EDR agent deployed as a VM extension for real-time threat detection
+- **Vulnerability assessment** — Powered by Microsoft Defender Vulnerability Management (MDVM) or Qualys
+- **Adaptive application controls** — ML-driven allow-listing of applications
+- **File integrity monitoring** — Track changes to critical system files and registry keys
+- **Just-in-time VM access** — Reduce attack surface by limiting management port exposure (RDP/SSH)
+- **Security recommendations** — Prioritized hardening advice based on your environment
+
+```bash
+# Enable Defender for Servers Plan 2 on a subscription
+az security pricing create \
+  --name VirtualMachines \
+  --tier Standard \
+  --subplan P2
+
+# The MDE extension deploys automatically to Arc-enabled servers
+# Or install manually:
+az connectedmachine extension create \
+  --machine-name "web-server-01" \
+  --resource-group "rg-arc-servers" \
+  --name "MDE.Linux" \
+  --type "MDE.Linux" \
+  --publisher "Microsoft.Azure.AzureDefenderForServers"
+```
+
+### Defender for Containers
+
+For Arc-enabled Kubernetes clusters, Defender for Containers provides:
+
+- **Runtime threat detection** — Alerts on suspicious container activity (crypto mining, reverse shells, privilege escalation)
+- **Vulnerability scanning** — Scan container images in CI/CD and at runtime
+- **Kubernetes audit log analysis** — Detect anomalous API server activity
+- **Security recommendations** — Hardening guidance for cluster configuration
+
+The Defender sensor is deployed as a cluster extension:
+
+```bash
+az k8s-extension create \
+  --name "microsoft.azuredefender.kubernetes" \
+  --cluster-name "prod-cluster" \
+  --resource-group "rg-arc-k8s" \
+  --cluster-type connectedClusters \
+  --extension-type microsoft.azuredefender.kubernetes
+```
+
+## Microsoft Sentinel Integration
+
+**Microsoft Sentinel** (Azure's cloud-native SIEM/SOAR) can ingest security data from Arc-enabled resources:
+
+- **Windows Security Events** — Collected via the Azure Monitor Agent with a Data Collection Rule
+- **Syslog / CEF** — Linux security logs forwarded to a Log Analytics workspace
+- **Defender for Cloud alerts** — Automatically forwarded to Sentinel when the connector is enabled
+- **Kubernetes audit logs** — Via the Container Insights extension or Defender for Containers
+
+### Setting Up Log Collection
+
+```bash
+# Create a Data Collection Rule for Windows Security Events
+az monitor data-collection rule create \
+  --name "dcr-windows-security" \
+  --resource-group "rg-monitoring" \
+  --location "eastus" \
+  --data-flows '[{"streams":["Microsoft-SecurityEvent"],"destinations":["la-workspace"]}]' \
+  --log-analytics '[{"name":"la-workspace","workspace-resource-id":"/subscriptions/SUB/resourceGroups/RG/providers/Microsoft.OperationalInsights/workspaces/WS"}]' \
+  --windows-event-logs '[{"name":"security-events","streams":["Microsoft-SecurityEvent"],"x-path-queries":["Security!*"]}]'
+
+# Associate the DCR with an Arc-enabled server
+az monitor data-collection rule association create \
+  --name "dcr-assoc-web01" \
+  --rule-id "/subscriptions/SUB/resourceGroups/rg-monitoring/providers/Microsoft.Insights/dataCollectionRules/dcr-windows-security" \
+  --resource "/subscriptions/SUB/resourceGroups/rg-arc-servers/providers/Microsoft.HybridCompute/machines/web-server-01"
+```
+
+## Extended Security Updates (ESU)
+
+Azure Arc enables delivery of **Extended Security Updates** for end-of-support products:
+
+- **Windows Server 2012 / 2012 R2** — ESU available through October 2026
+- **SQL Server 2012 / 2014** — ESU available through respective end dates
+
+### Why ESU Through Arc?
+
+- **No additional infrastructure** — ESUs are delivered as standard Windows Updates; no WSUS or special patching required
+- **Cost savings** — Arc-delivered ESUs can be more cost-effective than purchasing standalone ESU licenses
+- **Monthly billing** — Pay-as-you-go billing in direct connected mode (no upfront commitment)
+- **Compliance visibility** — Track ESU compliance across your estate in the Azure portal
+
+```bash
+# Enable ESU license for a Windows Server 2012 R2 machine
+az connectedmachine license create \
+  --name "esu-license-seattle" \
+  --resource-group "rg-arc-servers" \
+  --location "eastus" \
+  --license-type "ESU" \
+  --edition "Standard" \
+  --state "Activated" \
+  --target "Windows Server 2012 R2" \
+  --type "pCore" \
+  --processors 16
+```
+
+## Managed Identity
+
+Every Arc-enabled server and Kubernetes cluster automatically receives a **system-assigned managed identity** in Azure Active Directory. This enables:
+
+- **Credential-free authentication** — Access Azure services (Key Vault, Storage, SQL Database) without storing passwords
+- **Token-based auth** — The Hybrid Instance Metadata Service (HIMDS) provides tokens compatible with the Azure Instance Metadata Service (IMDS)
+- **VM extensions** — Extensions use managed identity to authenticate to Azure services
+
+```bash
+# From an Arc-enabled server, fetch a token (same as Azure VM IMDS)
+TOKEN=$(curl -s -H "Metadata: true" \
+  "http://localhost:40342/metadata/identity/oauth2/token?api-version=2020-06-01&resource=https://vault.azure.net" \
+  | jq -r .access_token)
+
+# Use the token to access Key Vault
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://my-keyvault.vault.azure.net/secrets/my-secret?api-version=7.4"
+```
+
+## Certificate-Based Authentication
+
+The Connected Machine agent uses **certificate-based authentication** to communicate with Azure:
+
+- A **self-signed certificate** is generated during onboarding and stored locally on the machine
+- The certificate is rotated automatically every **45 days** (before its 90-day expiry)
+- The private key is stored in the local machine certificate store (Windows) or `/var/opt/azcmagent/certs` (Linux)
+- No passwords or shared secrets traverse the network during regular operation
+
+This provides a **zero-trust communication model** — each machine has a unique, rotated credential that can be revoked by disconnecting the machine from Azure.
+
+## Security Best Practices
+
+- **Enable Defender for Cloud** on all subscriptions containing Arc resources — use Plan 2 for full EDR capabilities
+- **Deploy Microsoft Sentinel** and configure data collection rules to ingest security events from Arc servers
+- **Use managed identity** instead of service principal secrets for application authentication to Azure services
+- **Restrict network access** — Use Private Link or proxy for environments with strict egress requirements
+- **Apply Azure Policy security baselines** — Use the Azure Security Benchmark initiative for Arc servers
+- **Enable ESU through Arc** for any end-of-support Windows Server or SQL Server instances
+- **Monitor agent health** — Set up alerts for disconnected machines (no heartbeat for >30 minutes)
+- **Rotate service principal secrets** used for at-scale onboarding on a regular schedule
+- **Use Conditional Access** — Apply Azure AD Conditional Access policies for portal and CLI access to Arc resources

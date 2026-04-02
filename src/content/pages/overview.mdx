@@ -1,0 +1,82 @@
+---
+title: "What is Azure Arc?"
+description: "An overview of Azure Arc — extending Azure management and services to any infrastructure"
+navLabel: "Overview"
+navOrder: 1
+heroEmoji: "🔭"
+heroSubtitle: "The hybrid and multicloud control plane"
+accentColor: "blue"
+---
+
+## What is Azure Arc?
+
+Azure Arc is a bridge that extends the Azure platform, enabling you to build applications and services with the flexibility to run across datacenters, at the edge, and in multicloud environments. Azure Arc projects non-Azure resources — servers, Kubernetes clusters, and data services — into **Azure Resource Manager (ARM)**, so they can be managed alongside native Azure resources through a single, consistent control plane.
+
+With Azure Arc, every resource gets an ARM resource ID, belongs to a resource group and subscription, and can be tagged, governed with Azure Policy, and secured with Role-Based Access Control (RBAC).
+
+## The Hybrid and Multicloud Story
+
+Organizations today operate across multiple environments:
+
+- **On-premises datacenters** — Legacy applications, regulatory requirements, or data gravity keep workloads local
+- **Multiple cloud providers** — Teams use AWS, GCP, or other clouds for specific capabilities or acquisitions
+- **Edge locations** — Retail stores, factories, and remote sites run compute close to data sources
+- **Sovereign and disconnected** — Air-gapped or partially connected environments with strict compliance needs
+
+Azure Arc addresses this reality by **not** requiring migration to Azure. Instead, it brings Azure's management capabilities *to* those resources wherever they live.
+
+## Key Value Propositions
+
+### Unified Operations
+Manage all resources from the Azure portal, Azure CLI, Azure PowerShell, REST API, or ARM/Bicep templates. No separate management tools per environment.
+
+### Consistent Governance at Scale
+Apply Azure Policy definitions to enforce organizational standards across your entire estate. Audit compliance, remediate drift, and report on posture — regardless of where resources reside.
+
+### Cloud-Native Services Anywhere
+Run Azure data services (SQL Managed Instance, PostgreSQL) on any Kubernetes cluster. Use GitOps (Flux v2) for declarative configuration management. Deploy cluster extensions like Azure Monitor, Defender, and Open Service Mesh.
+
+### Security and Compliance
+Extend **Microsoft Defender for Cloud** to Arc-enabled servers and Kubernetes clusters. Integrate with **Microsoft Sentinel** for SIEM/SOAR. Use managed identity and certificate-based authentication for secure, credential-free communication.
+
+### Cost Optimization
+Gain visibility into hybrid workloads for cost analysis. Use Azure Arc to deliver **Extended Security Updates (ESU)** for Windows Server 2012/R2 at lower cost than without Arc. Avoid vendor lock-in by standardizing on Kubernetes with Azure management.
+
+## Azure Arc Resource Types
+
+| Resource Type | ARM Resource Provider | Description |
+|---|---|---|
+| Arc-enabled servers | `Microsoft.HybridCompute/machines` | Windows and Linux servers outside Azure |
+| Arc-enabled Kubernetes | `Microsoft.Kubernetes/connectedClusters` | CNCF-conformant Kubernetes clusters |
+| Arc-enabled SQL Server | `Microsoft.AzureArcData/sqlServerInstances` | SQL Server instances on Arc-enabled servers |
+| Arc-enabled SQL MI | `Microsoft.AzureArcData/sqlManagedInstances` | Azure SQL Managed Instance on Kubernetes |
+| Arc-enabled PostgreSQL | `Microsoft.AzureArcData/postgresInstances` | PostgreSQL on Kubernetes |
+| Arc data controller | `Microsoft.AzureArcData/dataControllers` | Management component for Arc data services |
+
+## How It Works
+
+1. **Install an agent** — The Connected Machine agent (servers) or Arc-enabled Kubernetes agents connect outbound to Azure over HTTPS (port 443).
+2. **Projection into ARM** — The resource appears in the Azure portal with a full ARM resource ID.
+3. **Apply Azure services** — Attach policies, enable Defender, deploy extensions, configure monitoring.
+4. **Operate at scale** — Use Azure Resource Graph queries, automation, and CI/CD pipelines across all Arc resources.
+
+Azure Arc agents use **outbound-only** connections. No inbound firewall ports need to be opened. Communication flows through Azure Arc service endpoints, and optionally through **Azure Private Link** or a proxy server for restricted networks.
+
+## Pricing Model
+
+- **Arc-enabled servers** — The control plane (inventory, policy, tagging) is **free**. You pay for Azure services you enable: Defender for Cloud, Azure Monitor, Update Management, etc.
+- **Arc-enabled Kubernetes** — The control plane and GitOps (Flux v2) configurations are **free**. Cluster extensions and data services have their own pricing.
+- **Arc-enabled data services** — Billed based on the specific service (SQL MI or PostgreSQL) and the vCore/memory allocation. Direct-connected mode enables pay-as-you-go billing.
+
+## When to Use Azure Arc
+
+Azure Arc is the right choice when you need to:
+
+- Manage resources across multiple environments with a **single toolset**
+- Apply **consistent security and governance policies** across hybrid infrastructure
+- Run **Azure PaaS services** on infrastructure you control (on-prem Kubernetes)
+- Modernize operations with **GitOps and infrastructure as code** without rearchitecting applications
+- Extend **ESU coverage** to end-of-support Windows Server or SQL Server instances
+- Provide **multi-tenant management** for managed service providers via Azure Lighthouse
+
+Azure Arc is **not** a replacement for migrating workloads to Azure when that is feasible and desirable — it complements migration by covering the resources that must remain outside Azure.

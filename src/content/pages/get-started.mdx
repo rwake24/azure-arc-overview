@@ -1,0 +1,219 @@
+---
+title: "Get Started"
+description: "Quick start guide — prerequisites, onboard your first server, and connect your first Kubernetes cluster"
+navLabel: "Get Started"
+navOrder: 9
+heroEmoji: "🚀"
+heroSubtitle: "From zero to Arc in minutes"
+accentColor: "blue"
+---
+
+## Getting Started with Azure Arc
+
+This guide walks you through the prerequisites and hands-on steps to onboard your first Arc-enabled server and connect your first Kubernetes cluster. By the end, you'll have resources projected into Azure Resource Manager and managed from the Azure portal.
+
+## Prerequisites
+
+### Azure Subscription
+- An active Azure subscription. A free trial works for evaluation.
+- The `Microsoft.HybridCompute`, `Microsoft.GuestConfiguration`, `Microsoft.Kubernetes`, and `Microsoft.KubernetesConfiguration` resource providers must be registered.
+
+### Azure CLI
+Install the Azure CLI (version 2.53 or later) and required extensions:
+
+```bash
+# Install Azure CLI (Linux)
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+# Or update to latest
+az upgrade
+
+# Install Arc extensions
+az extension add --name connectedmachine
+az extension add --name connectedk8s
+az extension add --name k8s-configuration
+
+# Login to Azure
+az login
+
+# Set your default subscription
+az account set --subscription "YOUR_SUBSCRIPTION_ID"
+
+# Register resource providers
+az provider register --namespace Microsoft.HybridCompute
+az provider register --namespace Microsoft.GuestConfiguration
+az provider register --namespace Microsoft.Kubernetes
+az provider register --namespace Microsoft.KubernetesConfiguration
+```
+
+### Required Permissions
+- **Azure Connected Machine Onboarding** role (or Contributor) on the target resource group
+- **Local administrator/root** access on the server being onboarded
+- **cluster-admin** access on the Kubernetes cluster being connected
+
+## Step 1: Create a Resource Group
+
+```bash
+# Create a resource group for Arc resources
+az group create \
+  --name "rg-arc-quickstart" \
+  --location "eastus"
+```
+
+Choose a location close to your on-premises resources. The location determines where Azure Arc metadata is stored.
+
+## Step 2: Onboard Your First Server
+
+### Option A: Interactive Onboarding (Single Server)
+
+On the target server (Linux example):
+
+```bash
+# Download and install the Connected Machine agent
+wget https://aka.ms/azcmagent -O ~/install_linux_azcmagent.sh
+sudo bash ~/install_linux_azcmagent.sh
+
+# Verify the agent is installed
+azcmagent version
+
+# Check connectivity to Azure endpoints
+azcmagent check
+
+# Connect the server (opens a browser for authentication)
+sudo azcmagent connect \
+  --resource-group "rg-arc-quickstart" \
+  --location "eastus" \
+  --tenant-id "YOUR_TENANT_ID" \
+  --subscription-id "YOUR_SUBSCRIPTION_ID"
+```
+
+For Windows, download the installer from the Azure portal or use:
+
+```powershell
+# Download the Windows agent installer
+Invoke-WebRequest -Uri "https://aka.ms/AzureConnectedMachineAgent" -OutFile "$env:TEMP\install_windows_azcmagent.msi"
+
+# Install the agent
+msiexec /i "$env:TEMP\install_windows_azcmagent.msi" /quiet
+
+# Connect the server
+& "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect `
+  --resource-group "rg-arc-quickstart" `
+  --location "eastus" `
+  --tenant-id "YOUR_TENANT_ID" `
+  --subscription-id "YOUR_SUBSCRIPTION_ID"
+```
+
+### Option B: Generate a Script from the Portal
+
+1. Navigate to **Azure Arc → Servers → Add** in the Azure portal
+2. Select **Add a single server** (or multiple servers for at-scale)
+3. Fill in resource group, region, OS type, and connectivity method
+4. Download the generated onboarding script
+5. Run the script on the target server
+
+### Verify the Server is Connected
+
+```bash
+# From Azure CLI
+az connectedmachine show \
+  --name "YOUR_SERVER_NAME" \
+  --resource-group "rg-arc-quickstart" \
+  -o table
+
+# From the server itself
+azcmagent show
+```
+
+You should see `status: Connected` and the server should appear in **Azure Arc → Servers** in the portal.
+
+## Step 3: Connect Your First Kubernetes Cluster
+
+### Prerequisites for Kubernetes
+- `kubectl` configured with cluster-admin access to your cluster
+- Helm 3.x installed
+- Cluster running Kubernetes 1.26+
+
+```bash
+# Verify kubectl access
+kubectl get nodes
+
+# Connect the cluster to Azure Arc
+az connectedk8s connect \
+  --name "my-first-cluster" \
+  --resource-group "rg-arc-quickstart" \
+  --location "eastus"
+```
+
+This command deploys Arc agents into the `azure-arc` namespace. It typically takes 2-3 minutes.
+
+```bash
+# Verify the connection
+az connectedk8s show \
+  --name "my-first-cluster" \
+  --resource-group "rg-arc-quickstart" \
+  -o table
+
+# Check agent pods are running
+kubectl get pods -n azure-arc
+```
+
+All pods should be in `Running` state. The cluster should appear in **Azure Arc → Kubernetes clusters** in the portal.
+
+## Step 4: Explore Azure Arc in the Portal
+
+Now that you have resources connected, explore what's available:
+
+### For the Arc-Enabled Server
+1. Navigate to the server in **Azure Arc → Servers**
+2. **Extensions** — Install Azure Monitor Agent, Defender for Endpoint, or Custom Script
+3. **Policies** — See compliance with assigned Azure Policies
+4. **Update management** — Check for pending OS updates
+5. **Machine configuration** — View guest configuration audit results
+
+### For the Arc-Enabled Kubernetes Cluster
+1. Navigate to the cluster in **Azure Arc → Kubernetes clusters**
+2. **GitOps** — Create a Flux configuration pointing to a Git repository
+3. **Extensions** — Install Azure Monitor, Defender, or Azure Policy
+4. **Namespaces** — Browse cluster resources through the portal
+5. **Policies** — Assign Kubernetes-specific Azure Policies
+
+## Step 5: Deploy Your First GitOps Configuration
+
+```bash
+# Deploy a sample application via GitOps
+az k8s-configuration flux create \
+  --name "sample-app" \
+  --cluster-name "my-first-cluster" \
+  --resource-group "rg-arc-quickstart" \
+  --cluster-type connectedClusters \
+  --namespace "flux-system" \
+  --scope namespace \
+  --url "https://github.com/Azure/arc-k8s-demo" \
+  --branch "main" \
+  --kustomization name=demo path=./ prune=true
+```
+
+## Cleanup
+
+When you're done evaluating, clean up resources:
+
+```bash
+# Disconnect the Kubernetes cluster
+az connectedk8s delete \
+  --name "my-first-cluster" \
+  --resource-group "rg-arc-quickstart"
+
+# Disconnect the server (run on the server)
+sudo azcmagent disconnect
+
+# Delete the resource group
+az group delete --name "rg-arc-quickstart" --yes
+```
+
+## Next Steps
+
+- Enable [Microsoft Defender for Cloud](/azure-arc-overview/security) on your Arc resources
+- Set up [GitOps configurations](/azure-arc-overview/gitops) for declarative cluster management
+- Apply [Azure Policy governance](/azure-arc-overview/governance) to enforce organizational standards
+- Review the [Architecture page](/azure-arc-overview/architecture) for production deployment patterns

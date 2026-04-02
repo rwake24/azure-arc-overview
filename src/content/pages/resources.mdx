@@ -1,0 +1,167 @@
+---
+title: "Resources & Links"
+description: "Microsoft Learn paths, pricing, support channels, community resources, and related Azure services"
+navLabel: "Resources"
+navOrder: 10
+heroEmoji: "📚"
+heroSubtitle: "Learning paths, pricing, and community"
+accentColor: "cyan"
+---
+
+## Resources
+
+This page collects essential links, learning paths, pricing information, and community resources for Azure Arc. Bookmark this as your reference hub.
+
+## Microsoft Learn Training
+
+### Learning Paths
+
+- **[Introduction to Azure Arc](https://learn.microsoft.com/en-us/training/modules/intro-to-azure-arc/)** — 30-minute introductory module covering Arc concepts
+- **[Manage hybrid infrastructure with Azure Arc](https://learn.microsoft.com/en-us/training/paths/manage-hybrid-infrastructure-with-azure-arc/)** — Multi-module path covering servers, Kubernetes, and governance
+- **[Deploy and manage Azure Arc-enabled Kubernetes clusters](https://learn.microsoft.com/en-us/training/paths/deploy-manage-azure-arc-enabled-kubernetes/)** — GitOps, cluster extensions, and Azure Policy for Kubernetes
+- **[Introduction to Azure Arc-enabled data services](https://learn.microsoft.com/en-us/training/modules/intro-to-arc-enabled-data-services/)** — SQL MI and PostgreSQL on Kubernetes
+- **[Implement GitOps with Azure Arc-enabled Kubernetes](https://learn.microsoft.com/en-us/training/modules/implement-gitops-with-azure-arc-enabled-kubernetes/)** — Hands-on Flux v2 configuration
+
+### Certifications
+
+Azure Arc knowledge is tested in several Microsoft certifications:
+
+- **AZ-800** — Administering Windows Server Hybrid Core Infrastructure
+- **AZ-801** — Configuring Windows Server Hybrid Advanced Services
+- **AZ-104** — Microsoft Azure Administrator (hybrid management section)
+- **AZ-305** — Designing Microsoft Azure Infrastructure Solutions
+
+## Official Documentation
+
+| Resource | Link |
+|---|---|
+| Azure Arc documentation hub | [learn.microsoft.com/azure/azure-arc](https://learn.microsoft.com/en-us/azure/azure-arc/) |
+| Arc-enabled servers docs | [learn.microsoft.com/azure/azure-arc/servers](https://learn.microsoft.com/en-us/azure/azure-arc/servers/) |
+| Arc-enabled Kubernetes docs | [learn.microsoft.com/azure/azure-arc/kubernetes](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/) |
+| Arc-enabled data services docs | [learn.microsoft.com/azure/azure-arc/data](https://learn.microsoft.com/en-us/azure/azure-arc/data/) |
+| Azure Arc REST API reference | [learn.microsoft.com/rest/api/hybridcompute](https://learn.microsoft.com/en-us/rest/api/hybridcompute/) |
+| Azure Arc Jumpstart | [azurearcjumpstart.com](https://azurearcjumpstart.com/) |
+
+## Pricing
+
+### Arc-Enabled Servers
+- **Control plane** (inventory, tagging, policy, resource graph) — **Free**
+- **Azure Monitor** — Per-GB ingestion pricing for logs; metrics retention pricing
+- **Microsoft Defender for Servers** — Plan 1: ~$5/server/month; Plan 2: ~$15/server/month
+- **Azure Update Manager** — Free for Arc-enabled servers (included)
+- **Extended Security Updates** — Priced per core; see [ESU pricing](https://learn.microsoft.com/en-us/windows-server/get-started/extended-security-updates-overview)
+
+### Arc-Enabled Kubernetes
+- **Control plane and GitOps** — **Free** (Flux configurations, cluster connect, Azure Policy for K8s)
+- **Cluster extensions** — Priced per extension (Defender for Containers, Azure Monitor, etc.)
+
+### Arc-Enabled Data Services
+- **SQL Managed Instance** — Priced per vCore/hour; General Purpose and Business Critical tiers
+- **PostgreSQL** — Priced per vCore/hour
+- **Pay-as-you-go** available in direct connected mode
+- See [Azure Arc pricing](https://azure.microsoft.com/en-us/pricing/details/azure-arc/) for current rates
+
+## Support
+
+### Support Plans
+- **Basic** — Included with all Azure subscriptions (billing and subscription support)
+- **Developer** — $29/month (business hours, email support)
+- **Standard** — $100/month (24/7 for Sev A/B, &lt;1 hour response for critical)
+- **Professional Direct** — $1,000/month (24/7, advisory services, ProDirect delivery manager)
+- **Unified** — Enterprise-wide support with dedicated TAM
+
+### Filing Support Tickets
+1. Navigate to **Help + Support** in the Azure portal
+2. Select **Create a support request**
+3. Service type: **Azure Arc** → select sub-service (servers, Kubernetes, data services)
+4. Describe the issue, attach logs, and select severity
+
+### Diagnostic Tools
+```bash
+# Server agent diagnostics
+azcmagent show
+azcmagent check
+azcmagent logs
+
+# Kubernetes agent diagnostics
+az connectedk8s troubleshoot \
+  --name "cluster-name" \
+  --resource-group "rg-name"
+
+# Collect Arc K8s agent logs
+kubectl logs -n azure-arc -l app.kubernetes.io/part-of=arc
+```
+
+## Community and Events
+
+- **[Azure Arc Jumpstart](https://azurearcjumpstart.com/)** — Comprehensive hands-on scenarios with automated deployment scripts (by the Arc product team)
+- **[Azure Arc GitHub](https://github.com/microsoft/azure_arc)** — Sample code, ARM templates, and automation scripts
+- **[Tech Community: Azure Arc Blog](https://techcommunity.microsoft.com/t5/azure-arc-blog/bg-p/AzureArcBlog)** — Product announcements and technical articles
+- **[Microsoft Q&A: Azure Arc](https://learn.microsoft.com/en-us/answers/tags/146/azure-arc)** — Ask and answer technical questions
+- **Azure Friday** — Regular video segments on Azure Arc features
+- **Microsoft Ignite / Build** — Annual conference sessions on Azure Arc updates
+
+## Related Azure Services
+
+### Azure Stack HCI
+**Azure Stack HCI** is a hyperconverged infrastructure solution that runs on validated hardware and integrates deeply with Azure Arc. It provides:
+- Azure-managed VMs on-premises
+- AKS hybrid (Kubernetes on HCI)
+- Azure Virtual Desktop on-premises
+- Arc-enabled by default
+
+### Azure VMware Solution
+**Azure VMware Solution (AVS)** runs VMware vSphere natively in Azure. Arc integration enables:
+- Projecting VMware VMs into Azure Resource Manager
+- Applying Azure governance to VMware workloads
+- Using Azure services (Monitor, Defender) on VMware VMs
+
+### Azure Stack Edge
+**Azure Stack Edge** is a managed edge appliance that supports:
+- Running Kubernetes at the edge with Arc management
+- AI/ML inferencing at the edge
+- Data preprocessing and transfer to Azure
+
+### Azure IoT Operations
+**Azure IoT Operations** leverages Arc-enabled Kubernetes to deploy IoT services on edge clusters:
+- MQTT broker for device communication
+- Data processor pipelines
+- Connector for OPC UA (industrial protocols)
+
+## Bicep / Terraform Resources
+
+### Bicep Template for Arc-Enabled Server Onboarding
+```bicep
+resource arcServer 'Microsoft.HybridCompute/machines@2024-07-10' existing = {
+  name: 'web-server-01'
+}
+
+resource amaExtension 'Microsoft.HybridCompute/machines/extensions@2024-07-10' = {
+  parent: arcServer
+  name: 'AzureMonitorLinuxAgent'
+  location: arcServer.location
+  properties: {
+    publisher: 'Microsoft.Azure.Monitor'
+    type: 'AzureMonitorLinuxAgent'
+    autoUpgradeMinorVersion: true
+  }
+}
+```
+
+### Terraform Provider
+The `azurerm` Terraform provider supports Arc resources:
+- `azurerm_arc_machine` — Arc-enabled server data source
+- `azurerm_arc_kubernetes_cluster` — Arc-enabled Kubernetes cluster
+- `azurerm_arc_machine_extension` — VM extensions on Arc servers
+
+## Quick Reference: Key CLI Commands
+
+| Action | Command |
+|---|---|
+| List Arc servers | `az connectedmachine list -g RG -o table` |
+| Show server details | `az connectedmachine show -n NAME -g RG` |
+| List K8s clusters | `az connectedk8s list -g RG -o table` |
+| Connect K8s cluster | `az connectedk8s connect -n NAME -g RG` |
+| Create Flux config | `az k8s-configuration flux create ...` |
+| Install extension | `az k8s-extension create ...` |
+| Check agent health | `azcmagent show` / `azcmagent check` |

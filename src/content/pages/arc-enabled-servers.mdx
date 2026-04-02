@@ -1,0 +1,138 @@
+---
+title: "Arc-Enabled Servers"
+description: "Onboard and manage Windows and Linux servers from any environment with Azure Arc"
+navLabel: "Servers"
+navOrder: 2
+heroEmoji: "🖥️"
+heroSubtitle: "Manage servers anywhere from Azure"
+accentColor: "purple"
+---
+
+## Arc-Enabled Servers
+
+Azure Arc-enabled servers let you manage Windows and Linux physical servers and virtual machines hosted **outside of Azure** — on-premises, at the edge, or in other clouds — as if they were native Azure resources. Each connected machine gets an Azure Resource Manager resource ID and can be managed through the same tools, policies, and security controls as Azure VMs.
+
+## The Connected Machine Agent
+
+The **Azure Connected Machine agent** (also called `azcmagent`) is the software that runs on each server to establish the connection to Azure. It consists of several components:
+
+- **Hybrid Instance Metadata Service (HIMDS)** — Provides an instance metadata endpoint compatible with Azure IMDS, enabling managed identity and token-based authentication
+- **Guest Configuration agent** — Evaluates Azure Policy guest configuration policies (machine configuration) on the server
+- **Extension manager** — Manages VM extensions (monitoring agents, custom scripts, etc.)
+
+The agent communicates **outbound only** over HTTPS (TCP 443) to Azure Arc service endpoints. No inbound firewall rules are required.
+
+### Supported Operating Systems
+
+- **Windows** — Windows Server 2012 R2, 2016, 2019, 2022, 2025 (Standard and Datacenter)
+- **Linux** — RHEL 7/8/9, CentOS 7/8, Ubuntu 16.04/18.04/20.04/22.04/24.04, SUSE 12/15, Debian 10/11/12, Oracle Linux 7/8, Amazon Linux 2, Rocky Linux 8/9, Alma Linux 8/9
+
+## Onboarding a Single Server
+
+For interactive onboarding of one server, generate an onboarding script from the Azure portal or use the CLI directly on the target machine:
+
+```bash
+# Download and install the agent (Linux)
+wget https://aka.ms/azcmagent -O ~/install_linux_azcmagent.sh
+bash ~/install_linux_azcmagent.sh
+
+# Connect the server to Azure
+azcmagent connect \
+  --resource-group "rg-arc-servers" \
+  --tenant-id "YOUR_TENANT_ID" \
+  --location "eastus" \
+  --subscription-id "YOUR_SUBSCRIPTION_ID" \
+  --tags "Environment=Production,Team=Platform"
+```
+
+This opens a browser-based device code authentication flow. Once authenticated, the server is projected into ARM.
+
+## At-Scale Onboarding with a Service Principal
+
+For production deployments of many servers, use a **service principal** to avoid interactive login:
+
+```bash
+# Create a service principal with the required role
+az ad sp create-for-rbac \
+  --name "sp-arc-onboarding" \
+  --role "Azure Connected Machine Onboarding" \
+  --scopes "/subscriptions/YOUR_SUB_ID/resourceGroups/rg-arc-servers"
+
+# Use the service principal for non-interactive onboarding
+azcmagent connect \
+  --service-principal-id "APP_ID" \
+  --service-principal-secret "APP_SECRET" \
+  --resource-group "rg-arc-servers" \
+  --tenant-id "YOUR_TENANT_ID" \
+  --location "eastus" \
+  --subscription-id "YOUR_SUB_ID" \
+  --tags "Datacenter=Seattle,CostCenter=IT"
+```
+
+The **Azure Connected Machine Onboarding** role is a built-in RBAC role scoped specifically for this purpose — it grants only the permissions needed to register machines, following least-privilege principles.
+
+### Other At-Scale Methods
+
+- **Azure Migrate** — Discover and onboard servers from VMware, Hyper-V, or physical environments
+- **Configuration Manager (SCCM)** — Deploy the agent via software distribution
+- **Group Policy** — Use a GPO to install and configure the agent on domain-joined Windows machines
+- **Ansible/Chef/Puppet** — Automate agent deployment with existing configuration management tools
+- **AWS Systems Manager / GCP OS Config** — Onboard from other cloud providers using their native tooling
+
+## Managing Arc-Enabled Servers
+
+Once connected, use Azure CLI or the portal to manage servers:
+
+```bash
+# List all Arc-enabled servers
+az connectedmachine list --resource-group "rg-arc-servers" -o table
+
+# Show details for a specific server
+az connectedmachine show --name "web-server-01" --resource-group "rg-arc-servers"
+
+# Install the Log Analytics agent extension
+az connectedmachine extension create \
+  --machine-name "web-server-01" \
+  --resource-group "rg-arc-servers" \
+  --name "MicrosoftMonitoringAgent" \
+  --type "MicrosoftMonitoringAgent" \
+  --publisher "Microsoft.EnterpriseCloud.Monitoring" \
+  --settings '{"workspaceId":"YOUR_WORKSPACE_ID"}' \
+  --protected-settings '{"workspaceKey":"YOUR_WORKSPACE_KEY"}'
+
+# Install the Azure Monitor Agent (recommended)
+az connectedmachine extension create \
+  --machine-name "web-server-01" \
+  --resource-group "rg-arc-servers" \
+  --name "AzureMonitorLinuxAgent" \
+  --type "AzureMonitorLinuxAgent" \
+  --publisher "Microsoft.Azure.Monitor"
+```
+
+## VM Extensions for Arc-Enabled Servers
+
+Key extensions available for Arc-enabled servers:
+
+| Extension | Purpose |
+|---|---|
+| Azure Monitor Agent (AMA) | Collect logs and metrics, send to Log Analytics workspace |
+| Microsoft Defender for Endpoint | Endpoint Detection and Response (EDR) |
+| Qualys vulnerability scanner | Vulnerability assessment integrated with Defender |
+| Custom Script Extension | Run post-deployment scripts for configuration |
+| Dependency Agent | Map application dependencies (Service Map) |
+| Key Vault Extension | Auto-rotate certificates from Azure Key Vault |
+| Azure Update Manager | Patch management and compliance reporting |
+| Windows Admin Center | In-portal server management experience |
+
+## Extended Security Updates (ESU)
+
+Azure Arc enables delivery of **Extended Security Updates** for Windows Server 2012/R2 and SQL Server 2012/2014 at no additional infrastructure cost beyond the ESU license. ESUs are enabled through Arc and delivered as regular Windows Updates — no special patching infrastructure required.
+
+## Best Practices
+
+- **Tag servers consistently** — Use tags for environment, owner, cost center, and datacenter location
+- **Use Azure Policy** to audit and enforce configurations (e.g., require Log Analytics agent)
+- **Enable Azure Update Manager** for centralized patch management
+- **Use Private Link** when servers are on networks with restricted internet access
+- **Monitor agent health** via the Azure portal heartbeat and `azcmagent show` locally
+- **Rotate service principal secrets** on a regular schedule for at-scale onboarding credentials

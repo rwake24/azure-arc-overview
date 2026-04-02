@@ -1,0 +1,211 @@
+---
+title: "Architecture & Networking"
+description: "Reference architectures, networking patterns, Private Link, proxy support, and agent communication for Azure Arc"
+navLabel: "Architecture"
+navOrder: 8
+heroEmoji: "🏗️"
+heroSubtitle: "Design patterns for hybrid management"
+accentColor: "purple"
+---
+
+## Architecture Overview
+
+Deploying Azure Arc at enterprise scale requires thoughtful architecture decisions around networking, identity, resource organization, and agent communication. This page covers reference architectures and networking patterns aligned with the **Azure Cloud Adoption Framework (CAF)** and **Azure Landing Zones**.
+
+## Reference Architectures
+
+### Hub-Spoke Topology
+
+The most common enterprise pattern for Arc-connected environments:
+
+```
+                    ┌─────────────────────┐
+                    │    Azure Cloud       │
+                    │  ┌───────────────┐   │
+                    │  │ Azure Arc     │   │
+                    │  │ Service       │   │
+                    │  │ Endpoints     │   │
+                    │  └───────┬───────┘   │
+                    └──────────┼───────────┘
+                               │ HTTPS 443
+                    ┌──────────┼───────────┐
+                    │     Hub Network       │
+                    │  ┌───────┴───────┐   │
+                    │  │ Proxy/Private │   │
+                    │  │ Link Endpoint │   │
+                    │  └───────┬───────┘   │
+                    │          │            │
+                    │  ┌───────┴───────┐   │
+                    │  │   Firewall    │   │
+                    │  └───────┬───────┘   │
+                    └──────────┼───────────┘
+               ┌───────────────┼──────────────┐
+               │               │              │
+    ┌──────────┴──┐  ┌────────┴──────┐  ┌───┴──────────┐
+    │ Spoke: DC1  │  │ Spoke: DC2    │  │ Spoke: Edge  │
+    │ Arc Servers │  │ Arc K8s       │  │ Arc K8s/IoT  │
+    └─────────────┘  └───────────────┘  └──────────────┘
+```
+
+**Key design points:**
+- Outbound traffic from all spokes routes through the hub firewall
+- Private Link endpoints are hosted in the hub for centralized DNS resolution
+- Arc agents in each spoke connect through the hub's egress path
+
+### Azure Landing Zone Integration
+
+Azure Arc fits into the **Azure Landing Zone** conceptual architecture:
+
+- **Platform Landing Zone** — Hosts shared services: Log Analytics workspace, Automation account, Private DNS zones, Private Link endpoints
+- **Application Landing Zones** — Dedicated subscriptions for Arc-enabled resource groups, organized by environment or business unit
+- **Management Group hierarchy** — Policies assigned at the top-level management group inherit to all Arc subscriptions
+
+```
+Root MG
+├── Platform
+│   ├── Management (Log Analytics, Automation, Defender)
+│   ├── Connectivity (Private Link, DNS, Firewall)
+│   └── Identity (Azure AD, PIM)
+├── Arc Landing Zones
+│   ├── Arc-Servers-Prod
+│   ├── Arc-Servers-NonProd
+│   ├── Arc-K8s-Prod
+│   └── Arc-Data-Prod
+└── Sandbox
+```
+
+## Agent Communication
+
+### Arc-Enabled Server Agent Endpoints
+
+The Connected Machine agent communicates with these Azure endpoints (outbound HTTPS 443):
+
+| Endpoint | Purpose |
+|---|---|
+| `login.microsoftonline.com` | Azure AD authentication |
+| `management.azure.com` | Azure Resource Manager |
+| `*.his.arc.azure.com` | Hybrid Identity Service |
+| `*.guestconfiguration.azure.com` | Machine configuration (Guest Config) |
+| `gbl.his.arc.azure.com` | Global service discovery |
+| `*.blob.core.windows.net` | Extension downloads |
+| `dc.services.visualstudio.com` | Agent telemetry (Application Insights) |
+
+### Arc-Enabled Kubernetes Agent Endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `management.azure.com` | ARM operations |
+| `*.dp.kubernetesconfiguration.azure.com` | Data plane for configuration |
+| `login.microsoftonline.com` | Azure AD authentication |
+| `mcr.microsoft.com` | Microsoft Container Registry (agent images) |
+| `*.data.mcr.microsoft.com` | MCR data endpoint |
+| `guestnotificationservice.azure.com` | Notification service |
+
+## Azure Private Link
+
+**Azure Arc Private Link Scope** enables Arc agents to communicate with Azure entirely over private network paths, using Azure ExpressRoute or VPN connections.
+
+### Setting Up Private Link
+
+```bash
+# Create a Private Link Scope
+az connectedmachine private-link-scope create \
+  --name "pls-arc-production" \
+  --resource-group "rg-arc-networking" \
+  --location "eastus"
+
+# Create a Private Endpoint in your hub VNet
+az network private-endpoint create \
+  --name "pe-arc-hub" \
+  --resource-group "rg-arc-networking" \
+  --vnet-name "vnet-hub" \
+  --subnet "snet-private-endpoints" \
+  --private-connection-resource-id "/subscriptions/SUB/resourceGroups/rg-arc-networking/providers/Microsoft.HybridCompute/privateLinkScopes/pls-arc-production" \
+  --group-id "hybridcompute" \
+  --connection-name "arc-pls-connection"
+
+# Associate Arc-enabled servers with the Private Link Scope
+az connectedmachine private-link-scope update-tag \
+  --name "pls-arc-production" \
+  --resource-group "rg-arc-networking"
+```
+
+### Private DNS Zones
+
+Private Link for Arc requires these private DNS zones:
+
+- `privatelink.his.arc.azure.com`
+- `privatelink.guestconfiguration.azure.com`
+- `privatelink.dp.kubernetesconfiguration.azure.com`
+
+These DNS zones must be linked to the VNet where your Private Endpoint resides, and on-premises DNS must forward queries for these domains to Azure DNS (168.63.129.16) via a DNS forwarder in the hub VNet.
+
+## Proxy Support
+
+For environments that route internet traffic through a proxy server:
+
+```bash
+# Configure the Connected Machine agent to use a proxy
+azcmagent config set proxy.url "http://proxy.contoso.com:8080"
+
+# For authenticated proxies
+azcmagent config set proxy.url "http://user:password@proxy.contoso.com:8080"
+
+# Bypass proxy for specific endpoints
+azcmagent config set proxy.bypass "localhost,169.254.169.254"
+```
+
+For Arc-enabled Kubernetes, configure the proxy at the `az connectedk8s connect` step:
+
+```bash
+az connectedk8s connect \
+  --name "cluster-behind-proxy" \
+  --resource-group "rg-arc-k8s" \
+  --proxy-https "http://proxy.contoso.com:8080" \
+  --proxy-http "http://proxy.contoso.com:8080" \
+  --no-proxy "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,localhost,.svc"
+```
+
+## Network Security Considerations
+
+### Firewall Rules
+
+If using Azure Firewall or a third-party NVA, create application rules allowing:
+
+- **FQDN tags**: `AzureArc` (covers all required Arc endpoints)
+- Or explicit allow-list of the endpoints listed above
+
+```bash
+# Azure Firewall: Allow Arc traffic with FQDN tag
+az network firewall application-rule create \
+  --firewall-name "fw-hub" \
+  --resource-group "rg-hub-networking" \
+  --collection-name "allow-arc" \
+  --name "azure-arc" \
+  --protocols Https=443 \
+  --fqdn-tags "AzureArc" \
+  --source-addresses "10.0.0.0/8" \
+  --priority 200 \
+  --action Allow
+```
+
+### Network Segmentation
+
+- Place Arc-enabled servers in dedicated subnets with NSG rules
+- Use the Azure Arc Private Link Scope to avoid internet-bound traffic
+- Combine with Azure Firewall for TLS inspection and logging of Arc traffic (exclude certificate pinned endpoints)
+
+## High Availability and Resilience
+
+- **Agent resilience** — The Connected Machine agent caches state locally and reconnects automatically after network interruptions. Servers report as "Disconnected" in the portal after 5 minutes without heartbeat.
+- **Kubernetes agents** — Arc agents run as Kubernetes deployments with replica counts for availability. They tolerate brief cluster network interruptions.
+- **Multi-region** — Register Arc resources in the Azure region closest to your datacenter for lowest latency. Arc metadata is stored in the selected region.
+
+## Best Practices
+
+- **Use Private Link** for production environments with ExpressRoute or VPN connectivity
+- **Centralize DNS** in the hub VNet for Private Link DNS resolution
+- **Document firewall rules** and test connectivity before large-scale agent deployment
+- **Select the nearest Azure region** for Arc resource registration to minimize latency
+- **Use the Azure Landing Zone architecture** as a starting point and adapt for Arc
+- **Monitor network connectivity** — Use `azcmagent check` to validate endpoint reachability before onboarding

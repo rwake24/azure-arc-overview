@@ -1,0 +1,165 @@
+---
+title: "Arc-Enabled Data Services"
+description: "Run Azure SQL Managed Instance and PostgreSQL on any Kubernetes cluster with Azure Arc"
+navLabel: "Data Services"
+navOrder: 4
+heroEmoji: "🗄️"
+heroSubtitle: "Azure data services on your infrastructure"
+accentColor: "orange"
+---
+
+## Arc-Enabled Data Services
+
+Azure Arc-enabled data services bring Azure PaaS database engines — **Azure SQL Managed Instance** and **PostgreSQL** — to any Kubernetes cluster managed by Azure Arc. This means you get cloud-native database capabilities (elastic scale, automatic patching, built-in HA, point-in-time restore) on infrastructure you control, whether on-premises, at the edge, or in another cloud.
+
+## Azure Data Controller
+
+The **Azure Data Controller** is the foundational component that must be deployed before any Arc data services. It runs as a set of pods on your Kubernetes cluster and provides:
+
+- **Lifecycle management** — Provisioning, scaling, patching, and upgrading database instances
+- **Monitoring** — Collects and forwards metrics and logs to Azure Monitor / Log Analytics
+- **Billing** — Meters usage and reports to Azure for billing (direct mode) or exports usage files (indirect mode)
+- **Security** — Manages credentials, certificates, and encryption
+
+```bash
+# Create a data controller (direct connected mode)
+az arcdata dc create \
+  --name "arc-dc-seattle" \
+  --resource-group "rg-arc-data" \
+  --connectivity-mode direct \
+  --location "westus2" \
+  --subscription "YOUR_SUB_ID" \
+  --custom-location "seattle-dc-location" \
+  --storage-class "managed-premium" \
+  --infrastructure "onpremises" \
+  --profile-name "azure-arc-kubeadm"
+```
+
+## Connectivity Modes
+
+### Direct Connected Mode
+- Data controller has **continuous outbound connectivity** to Azure
+- Metrics, logs, billing, and inventory are uploaded automatically in near-real-time
+- Database instances appear in the Azure portal immediately
+- Supports **pay-as-you-go billing** (no upfront licensing)
+- Azure Active Directory authentication is available
+- **Best for** environments with reliable internet access
+
+### Indirect Connected Mode
+- Data controller operates **without continuous Azure connectivity**
+- Usage data is exported to files and manually uploaded (at least once per month for billing)
+- Database instances are registered in Azure when usage is uploaded
+- **Best for** air-gapped, disconnected, or high-security environments with limited or no internet access
+
+| Feature | Direct | Indirect |
+|---|---|---|
+| Real-time portal visibility | ✅ | After upload |
+| Pay-as-you-go billing | ✅ | ❌ (export files) |
+| Azure AD authentication | ✅ | ❌ |
+| Automatic log/metric upload | ✅ | Manual export |
+| Azure RBAC for data services | ✅ | ❌ |
+| Disconnected operation | ❌ | ✅ |
+
+## Azure SQL Managed Instance (Arc)
+
+Arc-enabled SQL Managed Instance provides **near-100% compatibility with the latest SQL Server database engine**. This means you can lift and shift existing SQL Server workloads without application changes.
+
+### Key Capabilities
+- **High availability** — Built-in HA using Kubernetes ReplicaSets or with a Business Critical tier using Always On Availability Groups (up to 3 replicas)
+- **Point-in-time restore** — Restore to any point within the configured retention period
+- **Elastic scale** — Scale vCores and memory without downtime
+- **Automated patching** — Apply SQL engine updates through the data controller
+- **Azure AD authentication** — Available in direct connected mode
+- **Transparent Data Encryption (TDE)** — Encrypt data at rest
+
+```bash
+# Create a SQL Managed Instance (General Purpose)
+az sql mi-arc create \
+  --name "sql-mi-prod" \
+  --resource-group "rg-arc-data" \
+  --custom-location "seattle-dc-location" \
+  --storage-class-data "managed-premium" \
+  --storage-class-logs "managed-premium" \
+  --cores-limit 8 \
+  --cores-request 4 \
+  --memory-limit "32Gi" \
+  --memory-request "16Gi" \
+  --tier "GeneralPurpose"
+
+# Create a Business Critical instance with 3 replicas
+az sql mi-arc create \
+  --name "sql-mi-bc" \
+  --resource-group "rg-arc-data" \
+  --custom-location "seattle-dc-location" \
+  --tier "BusinessCritical" \
+  --replicas 3 \
+  --cores-limit 16 \
+  --cores-request 8 \
+  --memory-limit "64Gi" \
+  --memory-request "32Gi"
+```
+
+### Service Tiers
+
+| Tier | Use Case | HA Model |
+|---|---|---|
+| **General Purpose** | Most workloads, cost-effective | Kubernetes ReplicaSet (shared storage) |
+| **Business Critical** | Low latency, high IOPS, readable secondaries | Always On AG (up to 3 synchronous replicas) |
+
+## PostgreSQL (Arc-Enabled)
+
+Arc-enabled PostgreSQL runs the PostgreSQL engine on your Kubernetes cluster with Azure management capabilities.
+
+```bash
+# Create a PostgreSQL server
+az postgres server-arc create \
+  --name "pg-analytics" \
+  --resource-group "rg-arc-data" \
+  --custom-location "seattle-dc-location" \
+  --storage-class-data "managed-premium" \
+  --cores-limit 8 \
+  --cores-request 4 \
+  --memory-limit "32Gi" \
+  --memory-request "16Gi"
+```
+
+### Key Capabilities
+- **Scale up/down** — Adjust vCores and memory as demand changes
+- **Point-in-time restore** — Recover to a specific moment using continuous backups
+- **PostgreSQL extensions** — Support for popular extensions (PostGIS, pg_cron, etc.)
+- **Monitoring** — Integrated metrics and logs via Azure Monitor and Grafana/Kibana dashboards
+
+## Kubernetes Requirements
+
+Arc data services have specific infrastructure requirements:
+
+- **Kubernetes version** — 1.26+ (check current compatibility matrix)
+- **Storage** — ReadWriteOnce (RWO) persistent volumes; recommended to use a CSI-based storage class with SSD-backed storage
+- **Compute** — Minimum 8 vCPU cores and 32 GB RAM available for data workloads (beyond what the data controller uses)
+- **Networking** — LoadBalancer or NodePort service types for external database access
+- **Validated distributions** — AKS, AKS on HCI, EKS, GKE, kubeadm, OpenShift, RKE2, K3s
+
+## Monitoring and Operations
+
+The data controller deploys **Grafana** and **Kibana** dashboards for local monitoring. In direct connected mode, metrics and logs are also forwarded to Azure Monitor:
+
+```bash
+# View SQL MI status
+az sql mi-arc show --name "sql-mi-prod" --resource-group "rg-arc-data"
+
+# View data controller status
+az arcdata dc status show --name "arc-dc-seattle" --resource-group "rg-arc-data"
+
+# Export usage/billing data (indirect mode)
+az arcdata dc export --type usage --path /tmp/usage.json --name "arc-dc-seattle"
+az arcdata dc upload --path /tmp/usage.json
+```
+
+## Best Practices
+
+- **Use direct connected mode** when possible for the best management experience and Azure AD integration
+- **Size storage appropriately** — Use SSD-backed storage classes with sufficient IOPS for database workloads
+- **Configure resource limits** — Set both requests and limits for CPU and memory to prevent noisy-neighbor issues
+- **Enable monitoring** — Forward metrics to Azure Monitor and configure alerts for disk space, CPU, and failed connections
+- **Test disaster recovery** — Regularly test point-in-time restore and failover procedures
+- **Plan for upgrades** — Use maintenance windows for data controller and instance upgrades to minimize disruption

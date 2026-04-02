@@ -1,0 +1,194 @@
+---
+title: "Governance & Policy"
+description: "Azure Policy, RBAC, resource organization, and Azure Lighthouse for managing Arc resources at scale"
+navLabel: "Governance"
+navOrder: 6
+heroEmoji: "📋"
+heroSubtitle: "Consistent governance across hybrid infrastructure"
+accentColor: "green"
+---
+
+## Governance with Azure Arc
+
+One of Azure Arc's most powerful capabilities is extending Azure's governance framework to non-Azure resources. Once servers and Kubernetes clusters are projected into Azure Resource Manager, they inherit the full set of governance tools: **Azure Policy**, **Role-Based Access Control (RBAC)**, **resource organization**, and **Azure Lighthouse** for multi-tenant scenarios.
+
+## Azure Policy
+
+Azure Policy enables you to create, assign, and manage policy definitions that enforce rules and assess compliance across your hybrid estate.
+
+### Policy for Arc-Enabled Servers
+
+Arc-enabled servers support two categories of policy:
+
+- **Azure Policy (ARM-level)** — Audit or enforce properties of the ARM resource (tags, location, extensions installed)
+- **Machine Configuration (formerly Guest Configuration)** — Audit or enforce settings *inside* the OS (registry keys, file contents, installed software, service state)
+
+```bash
+# Assign a built-in policy: "Audit Windows machines missing any specified members in the Administrators group"
+az policy assignment create \
+  --name "audit-local-admins" \
+  --policy "30f71ea1-ac77-4f26-9fc5-2d926bbd4ba7" \
+  --scope "/subscriptions/YOUR_SUB_ID/resourceGroups/rg-arc-servers" \
+  --params '{"MembersToInclude": {"value": "CONTOSO\\ArcAdmins"}}'
+
+# Assign a policy to require the Azure Monitor Agent on Arc servers
+az policy assignment create \
+  --name "require-ama-linux" \
+  --policy "845857af-0333-4c5d-bbbc-6076697da122" \
+  --scope "/subscriptions/YOUR_SUB_ID" \
+  --assign-identity \
+  --location "eastus"
+```
+
+### Policy for Arc-Enabled Kubernetes
+
+Azure Policy for Kubernetes uses **OPA Gatekeeper** to enforce constraints on the Kubernetes API server:
+
+| Built-in Policy | Effect |
+|---|---|
+| Do not allow privileged containers | Deny |
+| Enforce internal load balancers | Deny |
+| Ensure container CPU and memory limits | Deny/Audit |
+| Allowed container images regex | Deny |
+| Require labels on namespaces | Audit/Deny |
+| Flux extension must be installed | Audit |
+| GitOps configuration must exist | Audit |
+
+Use **policy initiatives** (groups of policies) to apply security baselines to all clusters at once.
+
+## Role-Based Access Control (RBAC)
+
+Azure RBAC controls who can manage Arc resources in the Azure plane. Key built-in roles:
+
+| Role | Scope | Description |
+|---|---|---|
+| Azure Connected Machine Onboarding | Resource Group | Register machines only — used by service principals for at-scale onboarding |
+| Azure Connected Machine Resource Administrator | Resource Group | Full CRUD on Arc machine resources, manage extensions |
+| Kubernetes Cluster - Azure Arc Onboarding | Resource Group | Connect clusters to Azure Arc |
+| Reader | Any | View Arc resources without modification |
+| Contributor | Any | Full management of Arc resources |
+
+### Custom Roles
+
+Create custom roles for fine-grained access:
+
+```json
+{
+  "Name": "Arc Server Extension Manager",
+  "Description": "Can manage extensions on Arc-enabled servers",
+  "Actions": [
+    "Microsoft.HybridCompute/machines/extensions/read",
+    "Microsoft.HybridCompute/machines/extensions/write",
+    "Microsoft.HybridCompute/machines/extensions/delete",
+    "Microsoft.HybridCompute/machines/read"
+  ],
+  "AssignableScopes": ["/subscriptions/YOUR_SUB_ID"]
+}
+```
+
+## Resource Organization
+
+Effective resource organization is critical when managing hundreds or thousands of Arc resources.
+
+### Management Group Hierarchy
+
+```
+Tenant Root Group
+├── Contoso (top-level MG)
+│   ├── Platform
+│   │   ├── Connectivity (hub networking, DNS)
+│   │   └── Management (monitoring, automation)
+│   ├── Landing Zones
+│   │   ├── Production
+│   │   │   ├── Sub: prod-arc-servers
+│   │   │   └── Sub: prod-arc-k8s
+│   │   └── Non-Production
+│   │       ├── Sub: dev-arc-servers
+│   │       └── Sub: dev-arc-k8s
+│   └── Decommissioned
+```
+
+Assign policies at management group level so they **inherit** to all subscriptions and resource groups below.
+
+### Tagging Strategy
+
+Apply consistent tags to all Arc resources for cost tracking, ownership, and operations:
+
+```bash
+# Tag an Arc-enabled server
+az connectedmachine update \
+  --name "web-server-01" \
+  --resource-group "rg-arc-servers" \
+  --tags \
+    Environment=Production \
+    CostCenter=IT-1234 \
+    Owner=platform-team@contoso.com \
+    Datacenter=Seattle-DC1 \
+    OS=RHEL9 \
+    PatchGroup=Week2-Wednesday
+```
+
+Use Azure Policy to **enforce required tags** and **inherit tags** from resource groups:
+
+```bash
+# Require "Environment" tag on all Arc-enabled servers
+az policy assignment create \
+  --name "require-env-tag" \
+  --policy "871b6d14-10aa-478d-b590-94f262ecfa99" \
+  --scope "/subscriptions/YOUR_SUB_ID" \
+  --params '{"tagName": {"value": "Environment"}}'
+```
+
+### Resource Group Design
+
+Organize Arc resource groups by:
+- **Location/datacenter** — `rg-arc-seattle-dc1`, `rg-arc-london-dc2`
+- **Environment** — `rg-arc-prod-servers`, `rg-arc-dev-servers`
+- **Workload** — `rg-arc-k8s-platform`, `rg-arc-data-services`
+
+## Azure Resource Graph
+
+Query all Arc resources across subscriptions using **Azure Resource Graph**:
+
+```kusto
+// Find all Arc-enabled servers not running the Azure Monitor Agent
+resources
+| where type == "microsoft.hybridcompute/machines"
+| where properties.status == "Connected"
+| project name, resourceGroup, location, os=properties.osName
+| join kind=leftouter (
+    resources
+    | where type == "microsoft.hybridcompute/machines/extensions"
+    | where properties.type == "AzureMonitorLinuxAgent" or properties.type == "AzureMonitorWindowsAgent"
+    | extend machineName = tostring(split(id, "/")[8])
+    | project machineName
+) on $left.name == $right.machineName
+| where isempty(machineName)
+```
+
+## Azure Lighthouse
+
+**Azure Lighthouse** enables multi-tenant management, making it ideal for **Managed Service Providers (MSPs)** managing Arc resources across customer tenants.
+
+- **Delegated resource management** — MSP users can manage customer Arc resources from their own tenant
+- **Cross-tenant visibility** — View and query Arc resources across all managed customers
+- **Granular RBAC** — Delegate specific roles (e.g., Reader, Contributor) at the subscription or resource group level
+- **Eligible authorizations** — Require just-in-time elevation via Azure AD PIM for sensitive operations
+
+```bash
+# Create a Lighthouse delegation (customer runs this)
+az deployment sub create \
+  --location "eastus" \
+  --template-file "lighthouse-delegation.json" \
+  --parameters "mspOfferName=Contoso-Arc-Management" \
+  --parameters "mspOfferDescription=Arc management by Contoso MSP"
+```
+
+## Best Practices
+
+- **Assign policies at the management group level** — Ensures consistent coverage as new subscriptions are added
+- **Use policy initiatives** rather than individual policies for easier management
+- **Enforce tags with policy** — Don't rely on manual tagging; automate enforcement
+- **Review compliance dashboards** weekly and remediate non-compliant resources
+- **Audit RBAC assignments** regularly — Use access reviews in Azure AD
+- **Use Azure Lighthouse** for MSP scenarios instead of sharing credentials or VPN access

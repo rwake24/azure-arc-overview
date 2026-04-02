@@ -1,0 +1,17 @@
+{
+  "name": "azure-arc-overview",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Azure Arc — The Complete Guide to Hybrid & Multicloud Management",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^5.7.0",
+    "@astrojs/mdx": "^4.2.0",
+    "@astrojs/sitemap": "^3.3.0"
+  }
+}

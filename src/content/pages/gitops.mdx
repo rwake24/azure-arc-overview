@@ -1,0 +1,214 @@
+---
+title: "GitOps with Flux v2"
+description: "Declarative configuration management for Arc-enabled Kubernetes using Flux v2, Kustomize, and Helm"
+navLabel: "GitOps"
+navOrder: 5
+heroEmoji: "🔄"
+heroSubtitle: "Declarative configuration from Git to cluster"
+accentColor: "green"
+---
+
+## GitOps with Flux v2
+
+Azure Arc uses **Flux v2** as the built-in GitOps engine for Arc-enabled Kubernetes clusters. GitOps is a set of practices where Git repositories serve as the single source of truth for declarative infrastructure and application configurations. Flux continuously reconciles the desired state in Git with the actual state on the cluster, automatically correcting drift.
+
+## How Flux v2 Works on Arc
+
+When you create a Flux configuration on an Arc-enabled Kubernetes cluster, Azure deploys the **Flux extension** as a cluster extension. This includes several Flux controllers:
+
+- **Source Controller** — Watches Git repositories and Helm repositories for changes
+- **Kustomize Controller** — Applies Kustomize overlays and plain YAML manifests
+- **Helm Controller** — Manages Helm chart releases
+- **Notification Controller** — Dispatches events to external systems (Slack, Teams, webhooks)
+
+The configuration is managed through ARM, so you can use Azure CLI, portal, ARM templates, Bicep, or Terraform to define and assign GitOps configurations.
+
+## Creating a Flux Configuration
+
+```bash
+# Install the k8s-configuration CLI extension
+az extension add --name k8s-configuration
+
+# Create a Flux configuration with multiple Kustomizations
+az k8s-configuration flux create \
+  --name "cluster-config" \
+  --cluster-name "prod-cluster" \
+  --resource-group "rg-arc-k8s" \
+  --cluster-type connectedClusters \
+  --namespace "flux-system" \
+  --scope cluster \
+  --url "https://github.com/contoso/k8s-platform" \
+  --branch "main" \
+  --kustomization name=infrastructure path=./infrastructure prune=true \
+  --kustomization name=namespaces path=./namespaces prune=true \
+  --kustomization name=apps path=./apps prune=true dependsOn=["infrastructure","namespaces"]
+```
+
+### Key Parameters
+
+| Parameter | Description |
+|---|---|
+| `--scope cluster` | Applies to entire cluster (vs `namespace` scope for tenant isolation) |
+| `--branch` | Git branch to track (supports `--tag` and `--commit` too) |
+| `--kustomization path` | Path in the repo containing Kustomize overlays or plain YAML |
+| `--kustomization prune=true` | Delete resources from cluster when removed from Git |
+| `dependsOn` | Ensures Kustomizations are applied in order |
+| `--interval` | Sync interval (default: 10 minutes for source, 5 minutes for kustomization) |
+
+## Kustomize Support
+
+Flux natively supports **Kustomize** for managing environment-specific variations of Kubernetes manifests. A typical repository structure:
+
+```
+├── base/
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   └── kustomization.yaml
+├── overlays/
+│   ├── dev/
+│   │   └── kustomization.yaml
+│   ├── staging/
+│   │   └── kustomization.yaml
+│   └── production/
+│       ├── kustomization.yaml
+│       └── replica-patch.yaml
+```
+
+Each overlay can patch resources, add labels, change replica counts, or substitute environment-specific values — all without duplicating YAML.
+
+## Helm Support
+
+Flux can manage **Helm chart releases** declaratively. Define a `HelmRepository` source and `HelmRelease` resources in your Git repo:
+
+```yaml
+# helm-repo.yaml
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: ingress-nginx
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://kubernetes.github.io/ingress-nginx
+---
+# helm-release.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: ingress-nginx
+  namespace: ingress-system
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: ingress-nginx
+      version: "4.x"
+      sourceRef:
+        kind: HelmRepository
+        name: ingress-nginx
+        namespace: flux-system
+  values:
+    controller:
+      replicaCount: 3
+      service:
+        type: LoadBalancer
+```
+
+## Private Git Repositories
+
+For private repositories, Flux supports several authentication methods:
+
+```bash
+# HTTPS with a personal access token
+az k8s-configuration flux create \
+  --name "private-config" \
+  --cluster-name "prod-cluster" \
+  --resource-group "rg-arc-k8s" \
+  --cluster-type connectedClusters \
+  --url "https://github.com/contoso/private-configs" \
+  --branch "main" \
+  --https-user "git" \
+  --https-key "ghp_YOUR_PAT_TOKEN" \
+  --kustomization name=apps path=./apps prune=true
+
+# SSH with a deploy key
+az k8s-configuration flux create \
+  --name "ssh-config" \
+  --cluster-name "prod-cluster" \
+  --resource-group "rg-arc-k8s" \
+  --cluster-type connectedClusters \
+  --url "ssh://git@github.com/contoso/private-configs" \
+  --branch "main" \
+  --ssh-private-key-file "./deploy-key" \
+  --kustomization name=apps path=./apps prune=true
+```
+
+## Multi-Tenancy
+
+GitOps configurations can be scoped at the **cluster** or **namespace** level, enabling multi-tenant patterns:
+
+- **Cluster scope** — Platform team manages cluster-wide infrastructure (ingress, monitoring, policies, namespaces)
+- **Namespace scope** — Application teams manage their own namespace with their own Git repo
+
+```bash
+# Platform team: cluster-scoped configuration
+az k8s-configuration flux create \
+  --name "platform-config" \
+  --scope cluster \
+  --url "https://github.com/contoso/platform" \
+  --kustomization name=infra path=./cluster-infra prune=true
+
+# App Team A: namespace-scoped configuration
+az k8s-configuration flux create \
+  --name "team-a-apps" \
+  --scope namespace \
+  --namespace "team-a" \
+  --url "https://github.com/contoso/team-a-apps" \
+  --kustomization name=app path=./deploy prune=true
+```
+
+## Compliance and Azure Policy
+
+Use **Azure Policy** to enforce that all Arc-enabled Kubernetes clusters have specific Flux configurations:
+
+- **Built-in policy**: *"Kubernetes clusters should have the Flux extension installed"*
+- **Built-in policy**: *"Kubernetes clusters should have a Flux configuration"*
+- **Custom policies**: Enforce specific Git repo URLs, branches, or Kustomization paths
+
+```bash
+# Assign a built-in policy to require Flux extension
+az policy assignment create \
+  --name "require-flux" \
+  --policy "e765b5de-1286-4b30-a660-f3eba8a87da5" \
+  --scope "/subscriptions/YOUR_SUB_ID/resourceGroups/rg-arc-k8s"
+```
+
+## Monitoring GitOps
+
+```bash
+# Check Flux configuration status
+az k8s-configuration flux show \
+  --name "cluster-config" \
+  --cluster-name "prod-cluster" \
+  --resource-group "rg-arc-k8s" \
+  --cluster-type connectedClusters
+
+# Check individual Kustomization compliance
+az k8s-configuration flux kustomization show \
+  --name "apps" \
+  --cluster-name "prod-cluster" \
+  --resource-group "rg-arc-k8s" \
+  --cluster-type connectedClusters \
+  --flux-config-name "cluster-config"
+```
+
+In the Azure portal, you can see the compliance state of each Kustomization, the last sync time, and any errors.
+
+## Best Practices
+
+- **Separate platform and application configs** — Use different Git repos or paths for infrastructure vs. app teams
+- **Use Kustomize overlays** for environment promotion (dev → staging → production)
+- **Enable pruning** (`prune=true`) so deleted resources in Git are cleaned up on the cluster
+- **Set dependency ordering** to ensure namespaces and CRDs are created before workloads
+- **Use branch protection** and pull request reviews in Git as your change management gate
+- **Monitor sync status** with Azure Policy compliance and Flux notification controller alerts
