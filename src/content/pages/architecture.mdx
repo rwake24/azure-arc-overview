@@ -1,58 +1,29 @@
 ---
-title: "Architecture & Networking"
-description: "Reference architectures, networking patterns, Private Link, proxy support, and agent communication for Azure Arc"
-navLabel: "Architecture"
+title: "Arc Networking"
+description: "Network connectivity patterns, Private Link, proxy support, and firewall configuration for Azure Arc"
+navLabel: "Networking"
 navOrder: 8
-heroEmoji: "🏗️"
-heroSubtitle: "Design patterns for hybrid management"
+heroEmoji: "🌐"
+heroSubtitle: "Connectivity patterns for hybrid management"
 accentColor: "purple"
 ---
 
-## Architecture Overview
+## Network Connectivity Options
 
-Deploying Azure Arc at enterprise scale requires thoughtful architecture decisions around networking, identity, resource organization, and agent communication. This page covers reference architectures and networking patterns aligned with the **Azure Cloud Adoption Framework (CAF)** and **Azure Landing Zones**.
+Azure Arc agents communicate outbound-only over HTTPS (port 443). There are four connectivity options depending on your network requirements:
 
-## Reference Architectures
+![Azure Arc-enabled server network connectivity options](/azure-arc-overview/images/arc-network-connectivity.png)
 
-### Hub-Spoke Topology
+*Source: [Arc-enabled servers connectivity — Cloud Adoption Framework (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/hybrid/arc-enabled-servers/eslz-arc-servers-connectivity#architecture)*
 
-The most common enterprise pattern for Arc-connected environments:
+| Option | Path | When to Use |
+|--------|------|-------------|
+| **① Direct** | Server → Internet → Public endpoint | Simple environments, no proxy/firewall restrictions |
+| **② Proxy** | Server → Proxy → Internet → Public endpoint | Environments requiring traffic inspection or URL filtering |
+| **③ Service Tag** | Server → S2S VPN/ExpressRoute → Azure VNet → Public endpoint | Enterprises with private connectivity to Azure, using NSG service tags |
+| **④ Private Link** | Server → S2S VPN/ExpressRoute → Azure VNet → Private endpoint | Most secure — all Arc traffic stays on private network |
 
-```
-                    ┌─────────────────────┐
-                    │    Azure Cloud       │
-                    │  ┌───────────────┐   │
-                    │  │ Azure Arc     │   │
-                    │  │ Service       │   │
-                    │  │ Endpoints     │   │
-                    │  └───────┬───────┘   │
-                    └──────────┼───────────┘
-                               │ HTTPS 443
-                    ┌──────────┼───────────┐
-                    │     Hub Network       │
-                    │  ┌───────┴───────┐   │
-                    │  │ Proxy/Private │   │
-                    │  │ Link Endpoint │   │
-                    │  └───────┬───────┘   │
-                    │          │            │
-                    │  ┌───────┴───────┐   │
-                    │  │   Firewall    │   │
-                    │  └───────┬───────┘   │
-                    └──────────┼───────────┘
-               ┌───────────────┼──────────────┐
-               │               │              │
-    ┌──────────┴──┐  ┌────────┴──────┐  ┌───┴──────────┐
-    │ Spoke: DC1  │  │ Spoke: DC2    │  │ Spoke: Edge  │
-    │ Arc Servers │  │ Arc K8s       │  │ Arc K8s/IoT  │
-    └─────────────┘  └───────────────┘  └──────────────┘
-```
-
-**Key design points:**
-- Outbound traffic from all spokes routes through the hub firewall
-- Private Link endpoints are hosted in the hub for centralized DNS resolution
-- Arc agents in each spoke connect through the hub's egress path
-
-### Azure Landing Zone Integration
+## Azure Landing Zone Integration
 
 Azure Arc fits into the **Azure Landing Zone** conceptual architecture:
 
@@ -69,20 +40,20 @@ Root MG
 ├── Arc Landing Zones
 │   ├── Arc-Servers-Prod
 │   ├── Arc-Servers-NonProd
-│   ├── Arc-K8s-Prod
+│   ├── Arc-SQL-Prod
 │   └── Arc-Data-Prod
 └── Sandbox
 ```
 
-## Agent Communication
+## Agent Endpoints
 
-### Arc-Enabled Server Agent Endpoints
+### Arc-Enabled Server Agent
 
 The Connected Machine agent communicates with these Azure endpoints (outbound HTTPS 443):
 
 | Endpoint | Purpose |
 |---|---|
-| `login.microsoftonline.com` | Azure AD authentication |
+| `login.microsoftonline.com` | Microsoft Entra ID authentication |
 | `management.azure.com` | Azure Resource Manager |
 | `*.his.arc.azure.com` | Hybrid Identity Service |
 | `*.guestconfiguration.azure.com` | Machine configuration (Guest Config) |
@@ -90,13 +61,22 @@ The Connected Machine agent communicates with these Azure endpoints (outbound HT
 | `*.blob.core.windows.net` | Extension downloads |
 | `dc.services.visualstudio.com` | Agent telemetry (Application Insights) |
 
-### Arc-Enabled Kubernetes Agent Endpoints
+### Arc-Enabled SQL Server
+
+| Endpoint | Purpose |
+|---|---|
+| `*.<region>.arcdataservices.com` | Data plane (inventory, billing, telemetry) |
+| `management.azure.com` | ARM operations |
+| `login.microsoftonline.com` | Microsoft Entra ID authentication |
+| `*.blob.core.windows.net` | Extension downloads |
+
+### Arc-Enabled Kubernetes Agent
 
 | Endpoint | Purpose |
 |---|---|
 | `management.azure.com` | ARM operations |
 | `*.dp.kubernetesconfiguration.azure.com` | Data plane for configuration |
-| `login.microsoftonline.com` | Azure AD authentication |
+| `login.microsoftonline.com` | Microsoft Entra ID authentication |
 | `mcr.microsoft.com` | Microsoft Container Registry (agent images) |
 | `*.data.mcr.microsoft.com` | MCR data endpoint |
 | `guestnotificationservice.azure.com` | Notification service |
@@ -166,9 +146,7 @@ az connectedk8s connect \
   --no-proxy "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,localhost,.svc"
 ```
 
-## Network Security Considerations
-
-### Firewall Rules
+## Firewall Rules
 
 If using Azure Firewall or a third-party NVA, create application rules allowing:
 
@@ -189,23 +167,25 @@ az network firewall application-rule create \
   --action Allow
 ```
 
-### Network Segmentation
-
-- Place Arc-enabled servers in dedicated subnets with NSG rules
-- Use the Azure Arc Private Link Scope to avoid internet-bound traffic
-- Combine with Azure Firewall for TLS inspection and logging of Arc traffic (exclude certificate pinned endpoints)
-
-## High Availability and Resilience
-
-- **Agent resilience** — The Connected Machine agent caches state locally and reconnects automatically after network interruptions. Servers report as "Disconnected" in the portal after 5 minutes without heartbeat.
-- **Kubernetes agents** — Arc agents run as Kubernetes deployments with replica counts for availability. They tolerate brief cluster network interruptions.
-- **Multi-region** — Register Arc resources in the Azure region closest to your datacenter for lowest latency. Arc metadata is stored in the selected region.
-
-## Best Practices
+## Network Security Best Practices
 
 - **Use Private Link** for production environments with ExpressRoute or VPN connectivity
 - **Centralize DNS** in the hub VNet for Private Link DNS resolution
+- Place Arc-enabled servers in **dedicated subnets** with NSG rules
+- Combine Azure Firewall with Private Link for **TLS inspection and logging** (exclude certificate-pinned endpoints)
 - **Document firewall rules** and test connectivity before large-scale agent deployment
 - **Select the nearest Azure region** for Arc resource registration to minimize latency
-- **Use the Azure Landing Zone architecture** as a starting point and adapt for Arc
 - **Monitor network connectivity** — Use `azcmagent check` to validate endpoint reachability before onboarding
+
+## Agent Resilience
+
+- **Server agent** — Caches state locally and reconnects automatically after network interruptions. Reports as "Disconnected" in the portal after 5 minutes without heartbeat
+- **Kubernetes agents** — Run as Kubernetes deployments with replica counts. Tolerate brief cluster network interruptions
+- **Multi-region** — Register Arc resources in the Azure region closest to your datacenter for lowest latency
+
+## Learn More
+
+- [Arc-enabled servers connectivity — Cloud Adoption Framework (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/hybrid/arc-enabled-servers/eslz-arc-servers-connectivity)
+- [Azure Arc Private Link (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/azure-arc/servers/private-link-security)
+- [Network requirements for Arc-enabled servers (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/azure-arc/servers/network-requirements)
+- [Azure Arc-enabled servers landing zone accelerator (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/hybrid/arc-enabled-servers/eslz-identity-and-access-management)
