@@ -63,55 +63,43 @@ These services are paid add-ons regardless of SA status:
 - Microsoft Sentinel
 - Extended Security Updates
 
-## SQL Server Management with Arc + SA
+## SQL Server: What SA Unlocks with Arc
 
-Arc-enabled SQL Server brings Azure-grade management to on-prem and third-party cloud SQL instances. SA enhances this with **ESU entitlement and pay-as-you-go flexibility**. For the full capabilities breakdown, architecture diagram, and onboarding guide, see the [Arc SQL page](/azure-arc-overview/arc-enabled-sql).
+Arc-enabled SQL Server transforms on-prem SQL instances with Azure management capabilities. SA enhances this further with **ESU entitlement, Azure Hybrid Benefit, and license mobility**.
 
-### SQL Server SA Benefits
+### SA Benefits for SQL Server
 
-- **ESU at no additional cost** — SA-covered SQL Server licenses include ESU when enrolled through Arc. Without SA, ESU is 75% of license cost per year, cumulative.
-- **Azure Hybrid Benefit** — Use existing SQL Server licenses on Azure VMs, saving up to 85% vs pay-as-you-go
-- **License Mobility** — Move SQL Server licenses between on-prem, third-party clouds, and Azure
+| Benefit | Without SA | With SA |
+|---------|-----------|---------|
+| Extended Security Updates | **75% of license cost/year** (cumulative) | ✅ Included |
+| Azure Hybrid Benefit (Azure VMs) | Pay full compute cost | **Up to 88% savings** |
+| Azure Hybrid Benefit (SQL MI) | Pay full compute cost | **Up to 74% savings** |
+| License Mobility | ❌ Locked to on-prem | ✅ Move between clouds |
+| Disaster Recovery rights | Must license DR replicas | ✅ Free passive failover |
 
-## Azure Hybrid Benefit (AHB)
+### What Arc Enables for SQL Server (vs Standalone)
 
-The most direct SA cost savings for Azure customers. AHB lets you apply existing on-prem licenses to Azure resources.
+Without Arc, on-prem SQL Server supports exactly **one** Azure management capability — Defender for SQL. Arc-enabled SQL Server unlocks **15 capabilities**, with more coming:
 
-### Windows Server AHB
+| Capability | SQL Server | Arc-Enabled SQL | SQL on Azure VM |
+|-----------|-----------|----------------|----------------|
+| Pay-as-you-go billing | ❌ | ✅ | ✅ |
+| Microsoft Entra ID auth | ❌ | ✅ | ✅ |
+| Best practices assessment | ❌ | ✅ | ✅ |
+| Inventory management | ❌ | ✅ | ✅ |
+| Automated patching | ❌ | ✅ | ✅ |
+| Automated backup | ❌ | ✅ | ✅ |
+| Performance monitoring | ❌ | ✅ | 🔜 Coming soon |
+| Microsoft Defender for SQL | ✅ | ✅ | ✅ |
+| TDE with Azure Key Vault | ❌ | 🔜 Coming soon | ✅ |
+| HA/DR inventory management | ❌ | ✅ | 🔜 Coming soon |
+| License compliance management | ❌ | 🔜 Coming soon | ✅ |
+| Cluster-aware patching & upgrades | ❌ | 🔜 Coming soon | 🔜 Coming soon |
+| Microsoft Purview (data governance) | ❌ | ✅ | 🔜 Coming soon |
+| Point-in-time restore | ❌ | ✅ | 🔜 Coming soon |
+| Backup long-term retention to Azure | ❌ | 🔜 Coming soon | ✅ |
 
-Each **Windows Server Standard** SA license (16 cores) covers up to **2 Azure VMs** with up to 8 vCPUs each. **Datacenter edition** covers **unlimited Azure VMs**.
-
-| VM Size | Pay-as-you-go | With AHB | Savings |
-|---------|--------------|----------|---------|
-| D4s v5 (4 vCPUs) | ~$280/mo | ~$140/mo | **~50%** |
-| D8s v5 (8 vCPUs) | ~$560/mo | ~$280/mo | **~50%** |
-| E16s v5 (16 vCPUs) | ~$1,120/mo | ~$560/mo | **~50%** |
-
-### SQL Server AHB
-
-| Instance | Pay-as-you-go | With AHB | Savings |
-|----------|--------------|----------|---------|
-| SQL MI General Purpose (8 vCores) | ~$1,500/mo | ~$450/mo | **~70%** |
-| SQL MI Business Critical (8 vCores) | ~$4,200/mo | ~$1,100/mo | **~74%** |
-| SQL on Azure VM (Enterprise, 8 vCPUs) | ~$2,400/mo | ~$280/mo | **~88%** |
-
-### Enabling AHB
-
-```bash
-# Enable AHB on an Azure VM
-az vm update \
-  --name "vm-prod-01" \
-  --resource-group "rg-production" \
-  --license-type "Windows_Server"
-
-# Enable AHB for SQL Managed Instance
-az sql mi update \
-  --name "sqlmi-prod" \
-  --resource-group "rg-production" \
-  --license-type "BasePrice"
-```
-
-In the portal: VM → **Configuration** → **Licensing** → select **Azure Hybrid Benefit**.
+For the full architecture diagram, onboarding guide, and migration assessment details, see the [Arc SQL page](/azure-arc-overview/arc-enabled-sql).
 
 ## Disaster Recovery Rights
 
@@ -158,8 +146,6 @@ az graph query -q "
 ## Learn More
 
 - [Windows Server management enabled by Azure Arc (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/azure-arc/servers/windows-server-management-overview)
-- [Azure Hybrid Benefit for Windows Server (Microsoft Learn)](https://learn.microsoft.com/en-us/windows-server/get-started/azure-hybrid-benefit)
-- [Azure Hybrid Benefit for SQL Server (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/azure-sql/azure-hybrid-benefit?view=azuresql)
 - [SQL Server enabled by Azure Arc — Overview (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/azure-arc/overview?view=sql-server-ver17)
 - [Software Assurance benefits (Microsoft Licensing)](https://www.microsoft.com/en-us/licensing/licensing-programs/software-assurance-default)
 - [License Mobility through Software Assurance (Microsoft)](https://www.microsoft.com/en-us/licensing/licensing-programs/software-assurance-license-mobility)
