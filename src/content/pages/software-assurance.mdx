@@ -101,16 +101,6 @@ Without Arc, on-prem SQL Server supports exactly **one** Azure management capabi
 
 For the full architecture diagram, onboarding guide, and migration assessment details, see the [Arc SQL page](/azure-arc-overview/arc-enabled-sql).
 
-## Disaster Recovery Rights
-
-SA provides **free failover rights** — no additional licenses needed for DR replicas:
-
-- **Windows Server:** Match your production virtual instances in a passive DR site
-- **SQL Server:** One passive failover instance per licensed production instance
-- **Azure Site Recovery:** Use ASR with existing SA-covered licenses for the DR target
-
-This is especially powerful with the Arc SA tier's built-in **Disaster Recovery** capability — you get both the license rights and the Azure management tooling.
-
 ## Tracking SA Benefits with Azure Arc
 
 Use Azure Resource Graph to audit SA and AHB utilization across your estate:
