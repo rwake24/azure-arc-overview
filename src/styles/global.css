@@ -154,6 +154,79 @@ main {
   border-radius: 0 8px 8px 0;
 }
 
+/* Tables */
+.mdx-content table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 2rem 0 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 0.9rem;
+}
+
+.mdx-content thead {
+  background: var(--bg-tertiary);
+}
+
+.mdx-content th {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+
+.mdx-content td {
+  padding: 0.75rem 1rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.mdx-content tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.mdx-content tbody tr:hover {
+  background: var(--bg-secondary);
+}
+
+.mdx-content tbody tr:nth-child(even) {
+  background: rgba(22, 27, 34, 0.5);
+}
+
+.mdx-content tbody tr:nth-child(even):hover {
+  background: var(--bg-secondary);
+}
+
+/* Add spacing between consecutive tables and between a table following a heading */
+.mdx-content h3 + table {
+  margin-top: 1.25rem;
+}
+
+.mdx-content table + h3 {
+  margin-top: 2.5rem;
+}
+
+.mdx-content table + table {
+  margin-top: 2.5rem;
+}
+
+.mdx-content table + p {
+  margin-top: 1.5rem;
+}
+
+/* Responsive table scroll */
+@media (max-width: 768px) {
+  .mdx-content table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* Cards grid */
 .card-grid {
   display: grid;
