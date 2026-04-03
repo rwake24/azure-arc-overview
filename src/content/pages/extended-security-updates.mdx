@@ -2,7 +2,7 @@
 title: "Extended Security Updates"
 description: "Deliver ESUs to end-of-support Windows Server and SQL Server through Azure Arc"
 navLabel: "ESU"
-navOrder: 5
+navOrder: 6
 heroEmoji: "🛡️"
 heroSubtitle: "Keep end-of-support servers protected"
 accentColor: "orange"
@@ -99,78 +99,18 @@ For large environments, use Azure Policy to automatically enroll servers:
 
 This is the recommended approach for enterprises with hundreds or thousands of end-of-support servers.
 
-## SQL Server ESU Through Arc
+## SQL Server ESU
 
-SQL Server ESU works through **Arc-enabled SQL Server** — a separate but related resource type that brings Azure management capabilities to on-prem and third-party cloud SQL instances.
+SQL Server ESU is delivered through **Arc-enabled SQL Server** — the same extension that brings Azure management to your on-prem SQL instances. ESU is one part of a much larger story.
 
 **Covered SQL Server versions:**
 - **SQL Server 2012** — End of support: July 12, 2022 (ESU ended July 2025)
 - **SQL Server 2014** — End of support: July 9, 2024 (ESU Year 1 active)
 - **SQL Server 2016** — End of support: July 14, 2026 (plan ahead)
 
-### Onboarding SQL Server to Arc
+**SQL Server ESU pricing** follows the same model — 75% of license cost per year, cumulative. Free on Azure VMs, Azure Stack HCI, and Azure VMware Solution. SA customers get ESU at no additional cost.
 
-```bash
-# Connect SQL Server to Azure Arc
-az sql server-arc create \
-  --name "SQL01" \
-  --resource-group "rg-arc-sql" \
-  --location "eastus"
-
-# Enable ESU subscription for Arc-enabled SQL Server
-az sql server-arc extension set \
-  --name "SQL01" \
-  --resource-group "rg-arc-sql" \
-  --esu-enabled true
-```
-
-SQL Server ESU through Arc supports **pay-as-you-go billing** — you're charged monthly through your Azure subscription based on core count. No Volume Licensing keys needed.
-
-### What Arc-Enabled SQL Server Unlocks (Beyond ESU)
-
-Connecting SQL Server to Arc doesn't just get you ESU — it brings a full suite of Azure management capabilities to your on-prem instances.
-
-#### Architecture
-
-SQL Server enabled by Azure Arc connects through the Connected Machine agent and Arc SQL extension, communicating outbound-only on port 443 through your enterprise firewall to Azure's control and data planes.
-
-![SQL Server enabled by Azure Arc — Solution Architecture](/azure-arc-overview/images/sql-arc-architecture.png)
-
-*Source: [SQL Server enabled by Azure Arc — Overview (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/azure-arc/overview?view=sql-server-ver17#architecture)*
-
-#### Capabilities Comparison
-
-| Capability | Arc-Enabled SQL Server | Standalone SQL Server |
-|-----------|----------------------|---------------------|
-| Pay-as-you-go billing | ✅ | ❌ |
-| Microsoft Entra ID authentication | ✅ | ❌ |
-| Best practices assessment | ✅ | ❌ |
-| Inventory management | ✅ | ❌ |
-| Automated patching | ✅ | ❌ |
-| Automated backup | ✅ | ❌ |
-| Performance monitoring | ✅ | ❌ |
-| Microsoft Defender for SQL | ✅ | ✅ |
-| HA/DR inventory management | ✅ | ❌ |
-| Microsoft Purview (data governance) | ✅ | ❌ |
-| Point-in-time restore | ✅ | ❌ |
-
-Standard SQL Server on its own supports only **Defender for SQL** — everything else requires Arc or Azure VM.
-
-### SQL Server ESU Pricing
-
-SQL Server ESU follows a similar model to Windows Server:
-
-| Edition | Per-Core Cost (Year 1) | Notes |
-|---------|----------------------|-------|
-| Enterprise | 75% of license cost | Minimum 4 cores |
-| Standard | 75% of license cost | Minimum 4 cores |
-
-**Free ESU for SQL Server on Azure:**
-- SQL Server on Azure VMs — **Free ESU**
-- SQL Server on Azure Stack HCI — **Free ESU**
-- SQL Server on Azure VMware Solution — **Free ESU**
-
-**Software Assurance benefit:** Customers with active SA on SQL Server licenses receive ESU at **no additional cost** when enrolled through Azure Arc. See the [Software Assurance](/azure-arc-overview/software-assurance) page for details.
+For the full Arc-enabled SQL Server story — architecture, capabilities, onboarding, migration assessment, and more — see the [Arc SQL page](/azure-arc-overview/arc-enabled-sql).
 
 ## ESU Timelines
 

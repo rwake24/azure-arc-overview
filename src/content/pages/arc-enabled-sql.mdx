@@ -1,0 +1,212 @@
+---
+title: "SQL Server Enabled by Azure Arc"
+description: "Bring Azure management, security, and governance to SQL Server instances anywhere"
+navLabel: "Arc SQL"
+navOrder: 4
+heroEmoji: "🗃️"
+heroSubtitle: "Azure-grade SQL management everywhere"
+accentColor: "cyan"
+---
+
+## Why Arc-Enable Your SQL Servers?
+
+Standard SQL Server running on-premises or in third-party clouds supports exactly **one** Azure management capability natively — Microsoft Defender for SQL. Everything else requires either migrating to Azure or connecting through Azure Arc.
+
+Arc-enabled SQL Server brings **11 Azure management capabilities** to your existing SQL instances without moving them anywhere.
+
+## Architecture
+
+SQL Server enabled by Azure Arc connects through the Connected Machine agent and Arc SQL extension, communicating outbound-only on port 443 through your enterprise firewall to Azure's control and data planes.
+
+![SQL Server enabled by Azure Arc — Solution Architecture](/azure-arc-overview/images/sql-arc-architecture.png)
+
+*Source: [SQL Server enabled by Azure Arc — Overview (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/azure-arc/overview?view=sql-server-ver17#architecture)*
+
+### Key Components
+
+- **Arc SQL Extension** — Installed on the host alongside the Connected Machine agent. Includes a short-lived deployer and a long-running service. Supports **Windows Least Privilege** mode
+- **Connected Machine Agent** — The same `azcmagent` used for Arc-enabled servers. Handles identity, communication, and extension management
+- **Control Plane** — Azure Resource Manager with the `Microsoft.AzureArcData` and `Microsoft.HybridCompute` resource providers. Manages instance, database, and availability group configuration
+- **Data Plane** — Regional endpoints (`*.<region>.arcdataservices.com`) for inventory, billing, license tracking, logs, metrics, and migration assessments
+
+All communication is **outbound-only on port 443** through your existing enterprise firewall and proxy. No inbound ports required.
+
+## Capabilities Comparison
+
+| Capability | Arc-Enabled SQL | Standalone SQL | SQL on Azure VM |
+|-----------|----------------|---------------|----------------|
+| Pay-as-you-go billing | ✅ | ❌ | ✅ |
+| Microsoft Entra ID auth | ✅ | ❌ | ✅ |
+| Best practices assessment | ✅ | ❌ | ✅ |
+| Inventory management | ✅ | ❌ | ✅ |
+| Automated patching | ✅ | ❌ | ✅ |
+| Automated backup | ✅ | ❌ | ✅ |
+| Performance monitoring | ✅ | ❌ | 🔜 Coming soon |
+| Microsoft Defender for SQL | ✅ | ✅ | ✅ |
+| TDE with Azure Key Vault | 🔜 Coming soon | ❌ | ✅ |
+| HA/DR inventory management | ✅ | ❌ | 🔜 Coming soon |
+| License compliance management | 🔜 Coming soon | ❌ | ✅ |
+| Microsoft Purview (data governance) | ✅ | ❌ | 🔜 Coming soon |
+| Point-in-time restore | ✅ | ❌ | 🔜 Coming soon |
+| Backup long-term retention to Azure | 🔜 Coming soon | ❌ | ✅ |
+
+## Onboarding SQL Server to Arc
+
+### Prerequisites
+
+- SQL Server 2012 or later (any edition)
+- Windows Server or Linux host already onboarded to Azure Arc (or onboard simultaneously)
+- Outbound connectivity on port 443
+- `Microsoft.AzureArcData` resource provider registered in your subscription
+
+### Single Instance
+
+```bash
+# If the host isn't already Arc-enabled, onboard it first
+az connectedmachine create \
+  --name "SQL-HOST-01" \
+  --resource-group "rg-arc-sql" \
+  --location "eastus"
+
+# Install the Arc SQL extension
+az connectedmachine extension create \
+  --machine-name "SQL-HOST-01" \
+  --resource-group "rg-arc-sql" \
+  --name "WindowsAgent.SqlServer" \
+  --type "WindowsAgent.SqlServer" \
+  --publisher "Microsoft.AzureData" \
+  --settings '{\"LicenseType\": \"Paid\"}'
+```
+
+### At Scale with Azure Policy
+
+For large environments, use the built-in policy **"Configure Arc-enabled machines running SQL Server to have SQL Server extension installed"**:
+
+```bash
+az policy assignment create \
+  --name "arc-sql-extension" \
+  --policy "fd2d1a6e-6d95-4f2e-aaf8-9b4e6e689f7c" \
+  --scope "/subscriptions/{sub-id}" \
+  --params '{"licenseType": {"value": "Paid"}}'
+```
+
+This ensures every Arc-enabled server running SQL Server automatically gets the extension installed.
+
+### Verify Onboarding
+
+```bash
+# List all Arc-enabled SQL Server instances
+az sql server-arc list \
+  --resource-group "rg-arc-sql" \
+  --output table
+
+# Get details on a specific instance
+az sql server-arc show \
+  --name "SQL-HOST-01" \
+  --resource-group "rg-arc-sql"
+```
+
+## Pay-As-You-Go Billing
+
+Arc-enabled SQL Server supports **pay-as-you-go (PAYG) licensing** — use SQL Server without purchasing licenses upfront:
+
+- Billed monthly through your Azure subscription
+- Based on actual core count (minimum 4 cores)
+- Includes Software Assurance equivalent benefits
+- Switch between PAYG and license-based (BYOL) anytime
+
+```bash
+# Set license type to pay-as-you-go
+az connectedmachine extension update \
+  --machine-name "SQL-HOST-01" \
+  --resource-group "rg-arc-sql" \
+  --name "WindowsAgent.SqlServer" \
+  --settings '{"LicenseType": "PAYG"}'
+```
+
+This is particularly useful for:
+- Dev/test environments with variable usage
+- Short-term projects that don't justify a full license purchase
+- Scaling up temporarily without license procurement delays
+
+## Best Practices Assessment
+
+Arc-enabled SQL Server includes the **SQL Best Practices Assessment** — an automated evaluation that checks your instance against Microsoft's recommended configuration:
+
+- **Performance** — Index health, query store, statistics freshness
+- **Security** — Authentication mode, TLS configuration, audit settings
+- **Availability** — Backup frequency, recovery model, AG health
+- **Configuration** — Memory settings, max degree of parallelism, cost threshold
+
+Results appear directly in the Azure portal under your Arc-enabled SQL instance. Assessments can run on-demand or on a schedule.
+
+## Migration Assessment
+
+Arc-enabled SQL Server includes built-in **migration readiness assessments** through the data plane telemetry service:
+
+- **Azure SQL Managed Instance readiness** — Compatibility analysis, feature parity check, performance requirements
+- **Azure SQL Database readiness** — Schema compatibility, unsupported features, migration complexity
+- **Azure VM sizing recommendations** — Right-size target VMs based on actual performance metrics
+
+```bash
+# Run migration assessment
+az sql server-arc assessment run \
+  --name "SQL-HOST-01" \
+  --resource-group "rg-arc-sql" \
+  --assessment-type "AzureSQLMI"
+```
+
+Results feed into **Azure Migrate** for consolidated migration planning across your SQL estate.
+
+## ESU for SQL Server
+
+Arc-enabled SQL Server also delivers **Extended Security Updates** for end-of-support versions. See the [ESU page](/azure-arc-overview/extended-security-updates) for full details on:
+
+- Covered versions (SQL 2012, 2014, 2016)
+- ESU pricing and timeline
+- Free ESU on Azure infrastructure
+- SA benefit for ESU at no additional cost
+
+## Security
+
+### Microsoft Defender for SQL
+
+Available for both Arc-enabled and standalone SQL Server, but Arc integration enables:
+- **Centralized alerts** in Defender for Cloud dashboard
+- **Vulnerability assessments** with remediation guidance
+- **Advanced threat detection** (SQL injection, brute force, anomalous access patterns)
+
+### Microsoft Entra ID Authentication
+
+Arc-enabled SQL Server supports **Microsoft Entra ID (formerly Azure AD) authentication** — eliminating the need for SQL logins and enabling:
+- Conditional Access policies
+- Multi-factor authentication
+- Centralized identity governance
+- Passwordless authentication
+
+## Monitoring and Observability
+
+### Performance Monitoring
+
+Arc collects SQL Server performance telemetry and surfaces it in the Azure portal:
+- CPU, memory, and I/O utilization
+- Wait statistics and top queries
+- Database size and growth trends
+- Backup status and history
+
+### Integration with Azure Monitor
+
+Forward SQL Server metrics and logs to Azure Monitor for:
+- Custom alerts and action groups
+- Log Analytics workbooks
+- Cross-resource dashboards alongside Azure VMs and other Arc resources
+
+## Learn More
+
+- [SQL Server enabled by Azure Arc — Overview (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/azure-arc/overview?view=sql-server-ver17)
+- [Connect SQL Server to Azure Arc (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/azure-arc/connect?view=sql-server-ver17)
+- [SQL Server enabled by Azure Arc — Security overview (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/azure-arc/security-overview?view=sql-server-ver17)
+- [Best practices assessment (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/azure-arc/assess?view=sql-server-ver17)
+- [SQL Server migration assessment with Azure Arc (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/azure-arc/migration-assessment?view=sql-server-ver17)
+- [SQL Server ESU enabled by Azure Arc (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/end-of-support/sql-server-extended-security-updates?view=sql-server-ver17)
+- [Deployment options for Arc-enabled SQL Server (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/azure-arc/deployment-options?view=sql-server-ver17)
