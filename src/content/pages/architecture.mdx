@@ -120,52 +120,76 @@ Private Link for Arc requires these private DNS zones:
 
 These DNS zones must be linked to the VNet where your Private Endpoint resides, and on-premises DNS must forward queries for these domains to Azure DNS (168.63.129.16) via a DNS forwarder in the hub VNet.
 
-## Proxy Support
+## Azure Arc Gateway
 
-For environments that route internet traffic through a proxy server:
+For enterprises that use proxies to manage outbound traffic, **Azure Arc gateway** simplifies network configuration by reducing the required endpoints from dozens to just **seven FQDNs**. Instead of opening firewall rules for every Arc service endpoint, you create a single gateway resource that serves as a common front-end.
+
+### How It Works
+
+Traffic flows through the gateway chain:
+
+**Arc agents → Arc proxy (local) → Enterprise proxy → Arc gateway → Target service**
+
+![Azure Arc gateway traffic flow](/azure-arc-overview/images/arc-gateway-overview.png)
+
+*Source: [Azure Arc gateway (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/azure-arc/servers/arc-gateway)*
+
+The gateway has two components:
+- **Arc gateway resource** — An Azure resource that serves as the common front-end. Created in your subscription and served on a specific domain (`<prefix>.gw.arc.azure.com`)
+- **Arc proxy** — A local service added to the Arc agent that acts as a forward proxy. No configuration needed on your part
+
+### Required Endpoints (with Gateway)
+
+With Arc gateway enabled, you only need to allow these **7 endpoints** through your firewall:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `<PREFIX>.gw.arc.azure.com` | Your Arc gateway endpoint |
+| `management.azure.com` | Azure Resource Manager |
+| `login.microsoftonline.com` | Microsoft Entra ID authentication |
+| `gbl.his.arc.azure.com` | Global service discovery |
+| `packages.microsoft.com` | Linux agent packages |
+| `mcr.microsoft.com` | Container images |
+| `*.blob.core.windows.net` | Extension downloads |
+
+Compare this to the full endpoint list (without gateway) that requires opening access to a dozen or more wildcard domains.
+
+### Creating an Arc Gateway Resource
 
 ```bash
-# Configure the Connected Machine agent to use a proxy
-azcmagent config set proxy.url "http://proxy.contoso.com:8080"
-
-# For authenticated proxies
-azcmagent config set proxy.url "http://user:password@proxy.contoso.com:8080"
-
-# Bypass proxy for specific endpoints
-azcmagent config set proxy.bypass "localhost,169.254.169.254"
+# Create the gateway resource
+az connectedmachine gateway create \
+  --name "arc-gateway-prod" \
+  --resource-group "rg-arc-networking" \
+  --location "eastus" \
+  --gateway-type "Public" \
+  --allowed-features "*"
 ```
 
-For Arc-enabled Kubernetes, configure the proxy at the `az connectedk8s connect` step:
+The response includes the gateway URL (`<prefix>.gw.arc.azure.com`). Use this when onboarding servers:
 
 ```bash
-az connectedk8s connect \
-  --name "cluster-behind-proxy" \
-  --resource-group "rg-arc-k8s" \
-  --proxy-https "http://proxy.contoso.com:8080" \
-  --proxy-http "http://proxy.contoso.com:8080" \
-  --no-proxy "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,localhost,.svc"
+# Onboard a server using the gateway
+azcmagent connect \
+  --resource-group "rg-arc-servers" \
+  --location "eastus" \
+  --gateway-id "/subscriptions/{sub-id}/resourceGroups/rg-arc-networking/providers/Microsoft.HybridCompute/gateways/arc-gateway-prod"
 ```
 
-## Firewall Rules
-
-If using Azure Firewall or a third-party NVA, create application rules allowing:
-
-- **FQDN tags**: `AzureArc` (covers all required Arc endpoints)
-- Or explicit allow-list of the endpoints listed above
+For existing Arc-enabled servers, associate them with the gateway:
 
 ```bash
-# Azure Firewall: Allow Arc traffic with FQDN tag
-az network firewall application-rule create \
-  --firewall-name "fw-hub" \
-  --resource-group "rg-hub-networking" \
-  --collection-name "allow-arc" \
-  --name "azure-arc" \
-  --protocols Https=443 \
-  --fqdn-tags "AzureArc" \
-  --source-addresses "10.0.0.0/8" \
-  --priority 200 \
-  --action Allow
+# Associate an existing server with the gateway
+azcmagent config set connection.gateway "/subscriptions/{sub-id}/resourceGroups/rg-arc-networking/providers/Microsoft.HybridCompute/gateways/arc-gateway-prod"
 ```
+
+### Limitations
+
+- **No proxy bypass** — When Arc gateway is in use, `azcmagent config set proxy.bypass` has no effect
+- **5 gateway resources per subscription** — Plan gateway placement across subscriptions
+- **Public cloud only** — Arc gateway is available in Azure public cloud, not sovereign clouds
+- **TLS inspection** — Not recommended with Arc gateway. If required, skip TLS inspection for `<prefix>.gw.arc.azure.com`
+- Some extensions may still require additional endpoints beyond the core 7
 
 ## Network Security Best Practices
 
@@ -186,6 +210,7 @@ az network firewall application-rule create \
 ## Learn More
 
 - [Arc-enabled servers connectivity — Cloud Adoption Framework (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/hybrid/arc-enabled-servers/eslz-arc-servers-connectivity)
+- [Azure Arc gateway (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/azure-arc/servers/arc-gateway)
 - [Azure Arc Private Link (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/azure-arc/servers/private-link-security)
 - [Network requirements for Arc-enabled servers (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/azure-arc/servers/network-requirements)
 - [Azure Arc-enabled servers landing zone accelerator (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/hybrid/arc-enabled-servers/eslz-identity-and-access-management)
