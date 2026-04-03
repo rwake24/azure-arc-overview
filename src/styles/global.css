@@ -160,10 +160,11 @@ main {
   border-collapse: separate;
   border-spacing: 0;
   margin: 2rem 0 2.5rem;
-  border: 1px solid var(--border);
+  border: 1px solid #444c56;
   border-radius: 10px;
   overflow: hidden;
   font-size: 0.9rem;
+  background: var(--bg-secondary);
 }
 
 .mdx-content thead {
@@ -175,14 +176,14 @@ main {
   text-align: left;
   font-weight: 600;
   color: var(--text-primary);
-  border-bottom: 2px solid var(--border);
+  border-bottom: 2px solid #444c56;
   white-space: nowrap;
 }
 
 .mdx-content td {
   padding: 0.75rem 1rem;
   color: var(--text-secondary);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #333a42;
 }
 
 .mdx-content tbody tr:last-child td {
