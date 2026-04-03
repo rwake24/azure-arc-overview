@@ -16,6 +16,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check external links
+        run: python scripts/check-links.py --strict
       - name: Build with Astro
         uses: withastro/action@v3
         with:
