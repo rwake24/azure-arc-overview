@@ -124,6 +124,25 @@ main {
   border-bottom-color: var(--accent-light);
 }
 
+/* Images */
+.mdx-content img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #444c56;
+  border-radius: 10px;
+  margin: 1.5rem 0;
+  display: block;
+}
+
+.mdx-content img + em {
+  display: block;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-top: -0.75rem;
+  margin-bottom: 1.5rem;
+}
+
 .mdx-content code {
   background: var(--code-bg);
   padding: 0.15em 0.4em;

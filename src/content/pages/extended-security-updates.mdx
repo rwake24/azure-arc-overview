@@ -128,7 +128,17 @@ SQL Server ESU through Arc supports **pay-as-you-go billing** — you're charged
 
 ### What Arc-Enabled SQL Server Unlocks (Beyond ESU)
 
-Connecting SQL Server to Arc doesn't just get you ESU — it brings a full suite of Azure management capabilities to your on-prem instances:
+Connecting SQL Server to Arc doesn't just get you ESU — it brings a full suite of Azure management capabilities to your on-prem instances.
+
+#### Architecture
+
+SQL Server enabled by Azure Arc connects through the Connected Machine agent and Arc SQL extension, communicating outbound-only on port 443 through your enterprise firewall to Azure's control and data planes.
+
+![SQL Server enabled by Azure Arc — Solution Architecture](/azure-arc-overview/images/sql-arc-architecture.png)
+
+*Source: [SQL Server enabled by Azure Arc — Overview (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/azure-arc/overview?view=sql-server-ver17#architecture)*
+
+#### Capabilities Comparison
 
 | Capability | Arc-Enabled SQL Server | Standalone SQL Server |
 |-----------|----------------------|---------------------|
@@ -210,3 +220,12 @@ For a typical 100-server WS2012 Standard environment (16 cores each):
 | Migrate to Azure Stack HCI | ~$120K (hardware + setup) | $0 ESU | $0 ESU | ~$120K |
 
 *Estimates vary by region and licensing. The point: ESU is a bridge, not a destination.*
+
+## Learn More
+
+- [Extended Security Updates for Windows Server — Overview (Microsoft Learn)](https://learn.microsoft.com/en-us/windows-server/get-started/extended-security-updates-overview)
+- [Deliver Extended Security Updates for Windows Server 2012 through Azure Arc (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/azure-arc/servers/deliver-extended-security-updates)
+- [SQL Server enabled by Azure Arc — Overview (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/azure-arc/overview?view=sql-server-ver17)
+- [SQL Server ESU enabled by Azure Arc (Microsoft Learn)](https://learn.microsoft.com/en-us/sql/sql-server/end-of-support/sql-server-extended-security-updates?view=sql-server-ver17)
+- [Azure Arc pricing — ESU (Microsoft Learn)](https://azure.microsoft.com/en-us/pricing/details/azure-arc/)
+- [Plan and manage Extended Security Updates (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/azure-arc/servers/plan-extended-security-updates)
